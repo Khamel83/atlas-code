@@ -342,6 +342,10 @@ class InputOutput:
             self.pretty = False
             fancy_input = False
 
+        console_kwargs = {}
+        if self.output:
+            console_kwargs['file'] = self.output
+
         if fancy_input:
             # Initialize PromptSession only if we have a capable terminal
             session_kwargs = {
@@ -356,12 +360,14 @@ class InputOutput:
                 session_kwargs["history"] = FileHistory(self.input_history_file)
             try:
                 self.prompt_session = PromptSession(**session_kwargs)
-                self.console = Console()  # pretty console
+                self.console = Console(**console_kwargs)  # pretty console
             except Exception as err:
-                self.console = Console(force_terminal=False, no_color=True)
+                console_kwargs.update(force_terminal=False, no_color=True)
+                self.console = Console(**console_kwargs)
                 self.tool_error(f"Can't initialize prompt toolkit: {err}")  # non-pretty
         else:
-            self.console = Console(force_terminal=False, no_color=True)  # non-pretty
+            console_kwargs.update(force_terminal=False, no_color=True)
+            self.console = Console(**console_kwargs)  # non-pretty
             if self.is_dumb_terminal:
                 self.tool_output("Detected dumb terminal, disabling fancy input and pretty output.")
 
@@ -993,15 +999,20 @@ class InputOutput:
         self._tool_message(message, strip, self.tool_warning_color)
 
     def tool_output(self, *messages, log_only=False, bold=False):
-        if messages:
-            hist = " ".join(messages)
+        if self.silent and not log_only:
+            return
+
+        text_messages = [str(m) for m in messages]
+
+        if text_messages:
+            hist = " ".join(text_messages)
             hist = f"{hist.strip()}"
             self.append_chat_history(hist, linebreak=True, blockquote=True)
 
         if log_only:
             return
 
-        messages = list(map(Text, messages))
+        rich_messages = list(map(Text, messages))
         style = dict()
         if self.pretty:
             if self.tool_output_color:
@@ -1009,7 +1020,7 @@ class InputOutput:
             style["reverse"] = bold
 
         style = RichStyle(**style)
-        self.console.print(*messages, style=style)
+        self.console.print(*rich_messages, style=style)
 
     def get_assistant_mdstream(self):
         mdargs = dict(
@@ -1043,6 +1054,14 @@ class InputOutput:
     def set_placeholder(self, placeholder):
         """Set a one-time placeholder text for the next input prompt."""
         self.placeholder = placeholder
+
+    @property
+    def silent(self):
+        return self.console.quiet
+
+    @silent.setter
+    def silent(self, value):
+        self.console.quiet = value
 
     def print(self, message=""):
         print(message)

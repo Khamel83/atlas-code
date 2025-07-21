@@ -13,6 +13,47 @@ This document summarizes the progress and context of the current development ses
 *   `b62743b3 - feat: Add openrouter_client.py for OpenRouter API interaction`
 *   `f38200c5 - copy`
 
+## LLM Operational Guidelines
+
+### Context Management Rules
+
+1.  **Auto-Summarize**  
+    - Every 5 messages (or after each completed subtask), generate a 1–2-sentence summary of all prior content.  
+    - Store that in the handover state and drop the detailed history.
+
+2.  **Token Monitoring & Handover**  
+    - Before each new prompt, estimate token usage.  
+    - If ≥ 70% of the model’s window is used, automatically run:
+      ```
+      /handover "auto-summary"
+      ```
+      then clear chat and restore only the summary.
+
+3.  **Tiered Model Routing**  
+    - For planning/analysis steps, use top-tier model.  
+    - For drafting/code edits, switch to medium-tier.  
+    - For repetitive or low-complexity tasks, use `--yolo` with Flash-Lite.
+
+4.  **“Plan → Execute” Workflow**  
+    - Always begin with `/plan` to break work into 3–7 steps.  
+    - Checkpoint the plan via `/handover "plan"` then clear history.  
+    - Process each step in its own mini-session, restoring only the plan and that step’s context.
+
+5.  **Prune & Restore**  
+    - Never carry more than the last summary + current step context.  
+    - Use `/restore` to load just those when starting a new session.
+
+> _By baking these rules into your system prompt, Claude Code will handle context compression, token monitoring, and model-tier switching automatically on every run._
+
+### Model Tiering Definitions
+
+To ensure consistent understanding and routing of LLM tasks, the following model tiering system is adopted across Atlas Code:
+
+*   **Silver / Low Tier:** Suitable for repetitive, low-complexity tasks, or initial drafting where speed and cost-efficiency are paramount. Equivalent to "Flash-Lite" or similar fast, economical models.
+*   **Gold / Mid Tier:** Ideal for general drafting, code edits, and tasks requiring a balance of capability and efficiency. Equivalent to "medium-tier" models.
+*   **Platinum / Top Tier:** Reserved for planning, complex analysis, and critical code generation where high accuracy and reasoning are essential. Equivalent to "top-tier" models.
+*   **Diamond / Flagship Tier:** The highest tier, for the most demanding tasks, advanced reasoning, and flagship model capabilities.
+
 **Summary of Work Completed in this Session:**
 
 1.  **Systematic Handover Process Implementation:**

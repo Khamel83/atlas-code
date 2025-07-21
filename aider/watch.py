@@ -191,7 +191,7 @@ class FileWatcher:
             if fname in self.coder.abs_fnames:
                 continue
             if self.analytics:
-                self.analytics.event("ai-comments file-add")
+                self.analytics.event("atlas-code-comments file-add")
             self.coder.abs_fnames.add(fname)
             rel_fname = self.coder.get_rel_fname(fname)
             if not added:
@@ -207,7 +207,7 @@ class FileWatcher:
             return ""
 
         if self.analytics:
-            self.analytics.event("ai-comments execute")
+            self.analytics.event("atlas-code-comments execute")
         self.io.tool_output("Processing your request...")
 
         if has_action == "!":

@@ -52,20 +52,22 @@ def try_to_select_default_model():
     # Special handling for OpenRouter
     openrouter_key = os.environ.get("OPENROUTER_API_KEY")
     if openrouter_key:
-        # Check if the user is on a free tier
+        # Check if the user is on a free tier (Silver/Low Tier)
         is_free_tier = check_openrouter_tier(openrouter_key)
         if is_free_tier:
+            # Default to a Silver/Low Tier model for free users
             return "openrouter/deepseek/deepseek-r1:free"
         else:
+            # Default to a Platinum/Top Tier model for paid OpenRouter users
             return "openrouter/anthropic/claude-sonnet-4"
 
     # Select model based on other available API keys
     model_key_pairs = [
-        ("ANTHROPIC_API_KEY", "sonnet"),
-        ("DEEPSEEK_API_KEY", "deepseek"),
-        ("OPENAI_API_KEY", "gpt-4o"),
-        ("GEMINI_API_KEY", "gemini/gemini-2.5-pro-exp-03-25"),
-        ("VERTEXAI_PROJECT", "vertex_ai/gemini-2.5-pro-exp-03-25"),
+        ("ANTHROPIC_API_KEY", "sonnet"),  # Platinum/Top Tier
+        ("DEEPSEEK_API_KEY", "deepseek"),  # Gold/Mid Tier
+        ("OPENAI_API_KEY", "gpt-4o"),  # Platinum/Top Tier
+        ("GEMINI_API_KEY", "gemini/gemini-2.5-pro-exp-03-25"),  # Platinum/Top Tier
+        ("VERTEXAI_PROJECT", "vertex_ai/gemini-2.5-pro-exp-03-25"),  # Platinum/Top Tier
     ]
 
     for env_key, model_name in model_key_pairs:

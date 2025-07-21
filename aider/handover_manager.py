@@ -58,6 +58,7 @@ class HandoverState:
     handover_reason: str
     handover_trigger: str
     validation_checksum: str
+    file_hashes: Optional[Dict[str, str]] = None
 
 
 class HandoverManager:
@@ -129,7 +130,8 @@ class HandoverManager:
                 
                 handover_reason=reason,
                 handover_trigger=trigger,
-                validation_checksum=""
+                validation_checksum="",
+                file_hashes={f: self._calculate_file_hash(f) for f in file_context.get("active", []) + file_context.get("read_only", [])}
             )
             
             # Calculate validation checksum
@@ -553,19 +555,54 @@ Based on the current session state and handover reason, the following actions ar
         except Exception:
             return {"untracked": [], "modified": [], "staged": []}
     
+    def _calculate_file_hash(self, file_path: str) -> Optional[str]:
+        """Calculate SHA256 hash of a file"""
+        try:
+            hasher = hashlib.sha256()
+            with open(file_path, 'rb') as f:
+                while True:
+                    chunk = f.read(4096)  # Read in 4KB chunks
+                    if not chunk:
+                        break
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except Exception:
+            return None
+
     def _calculate_state_checksum(self, state: HandoverState) -> str:
-        """Calculate validation checksum for state"""
+        """Calculate validation checksum for state, including file hashes"""
         # Create copy without checksum field
         state_dict = asdict(state)
         state_dict.pop('validation_checksum', None)
+
+        # Use file hashes from the state object directly
+        state_dict["file_hashes"] = state.file_hashes
         
         state_json = json.dumps(state_dict, sort_keys=True)
         return hashlib.sha256(state_json.encode()).hexdigest()[:16]
     
     def _validate_state_checksum(self, state: HandoverState) -> bool:
-        """Validate state checksum"""
+        """Validate state checksum and file hashes"""
+        # Recalculate checksum based on current file contents
         expected_checksum = self._calculate_state_checksum(state)
-        return expected_checksum == state.validation_checksum
+        
+        # Compare with stored checksum
+        if expected_checksum != state.validation_checksum:
+            if self.io:
+                self.io.tool_error("Handover state validation failed - checksum mismatch.")
+                self.io.tool_error(f"Expected: {expected_checksum}, Got: {state.validation_checksum}")
+            return False
+
+        # Verify individual file hashes against current file system state
+        for fpath, stored_hash in state.file_hashes.items():
+            current_hash = self._calculate_file_hash(fpath)
+            if stored_hash != current_hash:
+                if self.io:
+                    self.io.tool_error(f"File integrity check failed for {fpath}. Hash mismatch.")
+                    self.io.tool_error(f"Stored: {stored_hash}, Current: {current_hash}")
+                return False
+        
+        return True
     
     def _format_file_list(self, files: List[str]) -> str:
         """Format file list for documentation"""
@@ -658,3 +695,18 @@ Based on the current session state and handover reason, the following actions ar
             if self.io:
                 self.io.tool_error(f"GitHub integration error: {e}")
             return {"success": False, "reason": str(e)}
+
+    def perform_production_validation(self, coder):
+        """Perform production readiness validation and return results."""
+        try:
+            from .production_validator import ProductionReadinessValidator
+            validator = ProductionReadinessValidator(io=self.io, root_path=coder.root)
+            return validator.validate_project(coder=coder)
+        except ImportError:
+            if self.io:
+                self.io.tool_warning("Production validation not available. Install aider-chat[production] to enable.")
+            return None
+        except Exception as e:
+            if self.io:
+                self.io.tool_error(f"Error during production validation: {e}")
+            return None

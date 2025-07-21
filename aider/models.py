@@ -78,6 +78,22 @@ claude-opus-4-20250514
 
 ANTHROPIC_MODELS = [ln.strip() for ln in ANTHROPIC_MODELS.splitlines() if ln.strip()]
 
+# Atlas Code Model Tiering System:
+# To provide a clear understanding of model capabilities and intended use,
+# Atlas Code categorizes models into the following tiers:
+#
+# - Silver / Low Tier: Suitable for repetitive, low-complexity tasks, or initial drafting
+#   where speed and cost-efficiency are paramount. Examples: Flash-Lite, o1-mini.
+# - Gold / Mid Tier: Ideal for general drafting, code edits, and tasks requiring a balance
+#   of capability and efficiency. Examples: DeepSeek Chat, Claude 3.5 Haiku.
+# - Platinum / Top Tier: Reserved for planning, complex analysis, and critical code
+#   generation where high accuracy and reasoning are essential. Examples: GPT-4o, Claude 3.5 Sonnet.
+# - Diamond / Flagship Tier: The highest tier, for the most demanding tasks, advanced
+# #   reasoning, and flagship model capabilities. Examples: Claude Opus, GPT-4.
+#
+# These tiers guide model selection for different tasks and help users understand
+# the expected performance and cost implications.
+
 # Mapping of model aliases to their canonical names
 MODEL_ALIASES = {
     # Claude models
@@ -129,7 +145,6 @@ class ModelSettings:
     remove_reasoning: Optional[str] = None  # Deprecated alias for reasoning_tag
     system_prompt_prefix: Optional[str] = None
     accepts_settings: Optional[list] = None
-
 
 # Load model settings from package resource
 MODEL_SETTINGS = []
@@ -420,34 +435,34 @@ class Model(ModelSettings):
             self.system_prompt_prefix = "Formatting re-enabled. "
             if "reasoning_effort" not in self.accepts_settings:
                 self.accepts_settings.append("reasoning_effort")
-            return  # <--
+            return  # <-- Silver / Low Tier (Flash-Lite equivalent)
 
         if "gpt-4.1-mini" in model:
             self.edit_format = "diff"
             self.use_repo_map = True
             self.reminder = "sys"
             self.examples_as_sys_msg = False
-            return  # <--
+            return  # <-- Silver / Low Tier
 
         if "gpt-4.1" in model:
             self.edit_format = "diff"
             self.use_repo_map = True
             self.reminder = "sys"
             self.examples_as_sys_msg = False
-            return  # <--
+            return  # <-- Silver / Low Tier
 
         if "/o1-mini" in model:
             self.use_repo_map = True
             self.use_temperature = False
             self.use_system_prompt = False
-            return  # <--
+            return  # <-- Silver / Low Tier
 
         if "/o1-preview" in model:
             self.edit_format = "diff"
             self.use_repo_map = True
             self.use_temperature = False
             self.use_system_prompt = False
-            return  # <--
+            return  # <-- Silver / Low Tier
 
         if "/o1" in model:
             self.edit_format = "diff"
@@ -457,14 +472,14 @@ class Model(ModelSettings):
             self.system_prompt_prefix = "Formatting re-enabled. "
             if "reasoning_effort" not in self.accepts_settings:
                 self.accepts_settings.append("reasoning_effort")
-            return  # <--
+            return  # <-- Silver / Low Tier
 
         if "deepseek" in model and "v3" in model:
             self.edit_format = "diff"
             self.use_repo_map = True
             self.reminder = "sys"
             self.examples_as_sys_msg = True
-            return  # <--
+            return  # <-- Gold / Mid Tier
 
         if "deepseek" in model and ("r1" in model or "reasoning" in model):
             self.edit_format = "diff"
@@ -472,30 +487,30 @@ class Model(ModelSettings):
             self.examples_as_sys_msg = True
             self.use_temperature = False
             self.reasoning_tag = "think"
-            return  # <--
+            return  # <-- Gold / Mid Tier
 
         if ("llama3" in model or "llama-3" in model) and "70b" in model:
             self.edit_format = "diff"
             self.use_repo_map = True
             self.send_undo_reply = True
             self.examples_as_sys_msg = True
-            return  # <--
+            return  # <-- Gold / Mid Tier
 
         if "gpt-4-turbo" in model or ("gpt-4-" in model and "-preview" in model):
             self.edit_format = "udiff"
             self.use_repo_map = True
             self.send_undo_reply = True
-            return  # <--
+            return  # <-- Platinum / Top Tier
 
         if "gpt-4" in model or "claude-3-opus" in model:
             self.edit_format = "diff"
             self.use_repo_map = True
             self.send_undo_reply = True
-            return  # <--
+            return  # <-- Diamond / Flagship Tier
 
         if "gpt-3.5" in model or "gpt-4" in model:
             self.reminder = "sys"
-            return  # <--
+            return  # <-- Gold / Mid Tier (general GPT models)
 
         if "3-7-sonnet" in model:
             self.edit_format = "diff"
@@ -504,19 +519,19 @@ class Model(ModelSettings):
             self.reminder = "user"
             if "thinking_tokens" not in self.accepts_settings:
                 self.accepts_settings.append("thinking_tokens")
-            return  # <--
+            return  # <-- Platinum / Top Tier
 
         if "3.5-sonnet" in model or "3-5-sonnet" in model:
             self.edit_format = "diff"
             self.use_repo_map = True
             self.examples_as_sys_msg = True
             self.reminder = "user"
-            return  # <--
+            return  # <-- Platinum / Top Tier
 
         if model.startswith("o1-") or "/o1-" in model:
             self.use_system_prompt = False
             self.use_temperature = False
-            return  # <--
+            return  # <-- Silver / Low Tier
 
         if (
             "qwen" in model
@@ -527,7 +542,7 @@ class Model(ModelSettings):
             self.edit_format = "diff"
             self.editor_edit_format = "editor-diff"
             self.use_repo_map = True
-            return  # <--
+            return  # <-- Gold / Mid Tier
 
         if "qwq" in model and "32b" in model and "preview" not in model:
             self.edit_format = "diff"
@@ -537,7 +552,7 @@ class Model(ModelSettings):
             self.examples_as_sys_msg = True
             self.use_temperature = 0.6
             self.extra_params = dict(top_p=0.95)
-            return  # <--
+            return  # <-- Gold / Mid Tier
 
         if "qwen3" in model and "235b" in model:
             self.edit_format = "diff"
@@ -545,7 +560,7 @@ class Model(ModelSettings):
             self.system_prompt_prefix = "/no_think"
             self.use_temperature = 0.7
             self.extra_params = {"top_p": 0.8, "top_k": 20, "min_p": 0.0}
-            return  # <--
+            return  # <-- Diamond / Flagship Tier
 
         # use the defaults
         if self.edit_format == "diff":

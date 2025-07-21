@@ -88,6 +88,8 @@ class Commands:
 
     def cmd_model(self, args):
         "Switch the Main Model to a new LLM"
+        # When selecting a new model, consider its tier (Silver, Gold, Platinum, Diamond)
+        # as defined in aider/models.py for appropriate task routing and performance.
 
         model_name = args.strip()
         if not model_name:
@@ -127,6 +129,8 @@ class Commands:
 
     def cmd_editor_model(self, args):
         "Switch the Editor Model to a new LLM"
+        # When selecting a new model, consider its tier (Silver, Gold, Platinum, Diamond)
+        # as defined in aider/models.py for appropriate task routing and performance.
 
         model_name = args.strip()
         model = models.Model(
@@ -152,6 +156,8 @@ class Commands:
 
     def cmd_weak_model(self, args):
         "Switch the Weak Model to a new LLM"
+        # When selecting a new model, consider its tier (Silver, Gold, Platinum, Diamond)
+        # as defined in aider/models.py for appropriate task routing and performance.
 
         model_name = args.strip()
         model = models.Model(
@@ -261,6 +267,8 @@ class Commands:
 
     def cmd_models(self, args):
         "Search the list of available models"
+        # Future improvement: Enhance this command to display model tier information
+        # (Silver, Gold, Platinum, Diamond) alongside model names.
 
         args = args.strip()
 
@@ -405,6 +413,7 @@ class Commands:
 
         commit_message = args.strip() if args else None
         self.coder.repo.commit(message=commit_message, coder=self.coder)
+        self.coder._capture_handover_state("post_commit", "command_trigger")
 
     def cmd_lint(self, args="", fnames=None):
         "Lint and fix in-chat files or all dirty files if none in chat"
@@ -517,11 +526,8 @@ class Commands:
             # Run production validation if requested
             production_result = None
             if include_production:
-                try:
-                    from aider.production_validator import ProductionReadinessValidator
-                    validator = ProductionReadinessValidator(io=self.io, root_path=self.coder.root)
-                    production_result = validator.validate_project(coder=self.coder)
-                    
+                production_result = self.coder.handover_manager.perform_production_validation(coder=self.coder)
+                if production_result:
                     self.io.tool_output("\n📋 Production Readiness Assessment:")
                     self.io.tool_output(f"Overall Status: {production_result.overall_status.upper()}")
                     self.io.tool_output(f"Readiness Score: {production_result.readiness_score:.1%}")
@@ -530,14 +536,9 @@ class Commands:
                         self.io.tool_output("🚫 Deployment Blockers:")
                         for blocker in production_result.deployment_blockers:
                             self.io.tool_output(f"  - {blocker}")
-                    
-                except ImportError:
-                    self.io.tool_warning("Production validation not available")
-                except Exception as e:
-                    self.io.tool_warning(f"Production validation failed: {e}")
-            
+
             # Trigger handover
-            success = self.coder.perform_manual_handover(reason=reason)
+            success = self.coder.perform_manual_handover(reason=reason, production_report=production_result)
             
             if success:
                 self.io.tool_output(f"Handover completed successfully (reason: {reason})")
@@ -1508,9 +1509,11 @@ class Commands:
 
         errors = args()
         if not errors:
+            self.coder._capture_handover_state("post_test", "command_trigger")
             return
 
         self.io.tool_output(errors)
+        self.coder._capture_handover_state("post_test_with_errors", "command_trigger")
         return errors
 
     def cmd_run(self, args, add_on_nonzero_exit=False):
@@ -1548,11 +1551,13 @@ class Commands:
 
             if add_on_nonzero_exit and exit_status != 0:
                 # Return the formatted output message for test failures
+                self.coder._capture_handover_state("post_run_command_with_errors", "command_trigger")
                 return msg
             elif add and exit_status != 0:
                 self.io.placeholder = "What's wrong? Fix"
 
         # Return None if output wasn't added or command succeeded
+        self.coder._capture_handover_state("post_run_command", "command_trigger")
         return None
 
     def cmd_exit(self, args):

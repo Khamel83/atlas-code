@@ -116,11 +116,11 @@ def setup_git(git_root, io):
             pass
     elif cwd == Path.home():
         io.tool_warning(
-            "You should probably run aider in your project's directory, not your home dir."
+            "You should probably run Atlas Code in your project's directory, not your home dir."
         )
         return
     elif cwd and io.confirm_ask(
-        "No git repo found, create one to track aider's changes (recommended)?"
+        "No git repo found, create one to track Atlas Code's changes (recommended)?"
     ):
         git_root = str(cwd.resolve())
         repo = make_new_repo(git_root, io)
@@ -160,8 +160,8 @@ def check_gitignore(git_root, io, ask=True):
         repo = git.Repo(git_root)
         patterns_to_add = []
 
-        if not repo.ignored(".aider"):
-            patterns_to_add.append(".aider*")
+        if not repo.ignored(".atlas_code"):
+            patterns_to_add.append(".atlas_code*")
 
         env_path = Path(git_root) / ".env"
         if env_path.exists() and not repo.ignored(".env"):
@@ -209,15 +209,15 @@ def check_streamlit_install(io):
     return utils.check_pip_install_extra(
         io,
         "streamlit",
-        "You need to install the aider browser feature",
-        ["aider-chat[browser]"],
+        "You need to install the Atlas Code browser feature",
+        ["atlas-code[browser]"],
     )
 
 
 def write_streamlit_credentials():
     from streamlit.file_util import get_streamlit_file_path
 
-    # See https://github.com/Aider-AI/aider/issues/772
+    # See https://github.com/Atlas-Code/atlas-code/issues/772
 
     credential_path = Path(get_streamlit_file_path()) / "credentials.toml"
     if not os.path.exists(credential_path):
@@ -251,7 +251,7 @@ def launch_gui(args):
         "--server.runOnSave=false",
     ]
 
-    # https://github.com/Aider-AI/aider/issues/2193
+    # https://github.com/Atlas-Code/atlas-code/issues/2193
     is_dev = "-dev" in str(__version__)
 
     if is_dev:
@@ -505,7 +505,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
     if args.shell_completions:
         # Ensure parser.prog is set for shtab, though it should be by default
-        parser.prog = "aider"
+        parser.prog = "atlas-code"
         print(shtab.complete(parser, shell=args.shell_completions))
         sys.exit(0)
 
@@ -643,12 +643,12 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.analytics is not False:
         if analytics.need_to_ask(args.analytics):
             io.tool_output(
-                "Aider respects your privacy and never collects your code, chat messages, keys or"
+                "Atlas Code respects your privacy and never collects your code, chat messages, keys or"
                 " personal info."
             )
             io.tool_output(f"For more info: {urls.analytics}")
             disable = not io.confirm_ask(
-                "Allow collection of anonymous analytics to help improve aider?"
+                "Allow collection of anonymous analytics to help improve Atlas Code?"
             )
 
             analytics.asked_opt_in = True
@@ -908,7 +908,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
                 io,
                 fnames,
                 git_dname,
-                args.aiderignore,
+                args.atlas_codeignore,
                 models=main_model.commit_message_models(),
                 attribute_author=args.attribute_author,
                 attribute_committer=args.attribute_committer,
@@ -1028,8 +1028,8 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     ignores = []
     if git_root:
         ignores.append(str(Path(git_root) / ".gitignore"))
-    if args.aiderignore:
-        ignores.append(args.aiderignore)
+    if args.atlas_codeignore:
+        ignores.append(args.atlas_codeignore)
 
     if args.watch_files:
         file_watcher = FileWatcher(
@@ -1132,6 +1132,12 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.silent:
         io.silent = True
 
+    if not args.yolo and not args.message and not args.message_file and not args.exit:
+        io.tool_output("\n✨ To get started quickly, try running Atlas Code in YOLO mode:")
+        io.tool_output("   atlas-code --yolo")
+        io.tool_output("   (This will let Atlas Code make changes directly without asking for confirmation.)")
+        io.tool_output("\n")
+
     if args.message:
         io.add_to_input_history(args.message)
         if not args.silent:
@@ -1206,7 +1212,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
 def is_first_run_of_new_version(io, verbose=False):
     """Check if this is the first run of a new version/executable combination"""
-    installs_file = Path.home() / ".aider" / "installs.json"
+    installs_file = Path.home() / ".atlas_code" / "installs.json"
     key = (__version__, sys.executable)
 
     # Never show notes for .dev versions

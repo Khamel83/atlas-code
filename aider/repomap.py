@@ -55,11 +55,17 @@ class RepoMap:
         map_mul_no_files=8,
         refresh="auto",
         handover_callback=None,
+        budget_manager=None,
+        cost_estimator=None,
+        tier_router=None,
     ):
         self.io = io
         self.verbose = verbose
         self.refresh = refresh
         self.handover_callback = handover_callback
+        self.budget_manager = budget_manager
+        self.cost_estimator = cost_estimator
+        self.tier_router = tier_router
 
         if not root:
             root = os.getcwd()

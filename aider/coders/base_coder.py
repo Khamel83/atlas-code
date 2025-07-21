@@ -39,6 +39,9 @@ from aider.io import ConfirmGroup, InputOutput
 from aider.linter import Linter
 from aider.llm import litellm
 from aider.models import RETRY_TIMEOUT
+from aider.cost_estimator import CostEstimator
+from aider.tier_router import TierRouter
+from aider.budget_manager import BudgetManager
 from aider.reasoning_tags import (
     REASONING_TAG,
     format_reasoning_content,
@@ -183,6 +186,21 @@ class Coder:
                 total_tokens_sent=from_coder.total_tokens_sent,
                 total_tokens_received=from_coder.total_tokens_received,
                 file_watcher=from_coder.file_watcher,
+                num_exhausted_context_windows=from_coder.num_exhausted_context_windows,
+                num_malformed_responses=from_coder.num_malformed_responses,
+                last_keyboard_interrupt=from_coder.last_keyboard_interrupt,
+                num_reflections=from_coder.num_reflections,
+                message_cost=from_coder.message_cost,
+                shell_commands=from_coder.shell_commands,
+                rejected_urls=from_coder.rejected_urls,
+                abs_root_path_cache=from_coder.abs_root_path_cache,
+                chat_completion_call_hashes=from_coder.chat_completion_call_hashes,
+                chat_completion_response_hashes=from_coder.chat_completion_response_hashes,
+                need_commit_before_edits=from_coder.need_commit_before_edits,
+                handover_manager=from_coder.handover_manager,
+                handover_enabled=from_coder.handover_enabled,
+                auto_handover_threshold=from_coder.auto_handover_threshold,
+                handover_on_exit=from_coder.handover_on_exit,
             )
             use_kwargs.update(update)  # override to complete the switch
             use_kwargs.update(kwargs)  # override passed kwargs
@@ -345,6 +363,18 @@ class Coder:
         auto_handover=True,
         handover_on_exit=True,
         restore_session=None,
+        num_exhausted_context_windows=0,
+        num_malformed_responses=0,
+        last_keyboard_interrupt=None,
+        num_reflections=0,
+        message_cost=0.0,
+        shell_commands=None,
+        rejected_urls=None,
+        abs_root_path_cache=None,
+        chat_completion_call_hashes=None,
+        chat_completion_response_hashes=None,
+        need_commit_before_edits=None,
+        handover_manager=None,
     ):
         # Fill in a dummy Analytics if needed, but it is never .enable()'d
         self.analytics = analytics if analytics is not None else Analytics()
@@ -353,9 +383,9 @@ class Coder:
         self.chat_language = chat_language
         self.commit_language = commit_language
         self.commit_before_message = []
-        self.aider_commit_hashes = set()
-        self.rejected_urls = set()
-        self.abs_root_path_cache = {}
+        self.aider_commit_hashes = aider_commit_hashes if aider_commit_hashes is not None else set()
+        self.rejected_urls = rejected_urls if rejected_urls is not None else set()
+        self.abs_root_path_cache = abs_root_path_cache if abs_root_path_cache is not None else {}
 
         self.auto_copy_context = auto_copy_context
         self.auto_accept_architect = auto_accept_architect
@@ -373,20 +403,9 @@ class Coder:
 
         self.num_cache_warming_pings = num_cache_warming_pings
 
-        if not fnames:
-            fnames = []
-
-        if io is None:
-            io = InputOutput()
-
-        if aider_commit_hashes:
-            self.aider_commit_hashes = aider_commit_hashes
-        else:
-            self.aider_commit_hashes = set()
-
-        self.chat_completion_call_hashes = []
-        self.chat_completion_response_hashes = []
-        self.need_commit_before_edits = set()
+        self.chat_completion_call_hashes = chat_completion_call_hashes if chat_completion_call_hashes is not None else []
+        self.chat_completion_response_hashes = chat_completion_response_hashes if chat_completion_response_hashes is not None else []
+        self.need_commit_before_edits = need_commit_before_edits if need_commit_before_edits is not None else set()
 
         self.total_cost = total_cost
         self.total_tokens_sent = total_tokens_sent
@@ -409,9 +428,9 @@ class Coder:
         else:
             self.done_messages = []
 
-        self.io = io
+        self.io = io if io is not None else InputOutput()
 
-        self.shell_commands = []
+        self.shell_commands = shell_commands if shell_commands is not None else []
 
         if not auto_commits:
             dirty_commits = False
@@ -513,6 +532,9 @@ class Coder:
                 map_mul_no_files=map_mul_no_files,
                 refresh=map_refresh,
                 handover_callback=self._repo_handover_callback if hasattr(self, 'handover_enabled') and self.handover_enabled else None,
+                budget_manager=self.budget_manager,
+                cost_estimator=self.cost_estimator,
+                tier_router=self.tier_router,
             )
 
         self.summarizer = summarizer or ChatSummary(
@@ -550,7 +572,7 @@ class Coder:
                 self.io.tool_output(json.dumps(self.functions, indent=4))
 
         # Initialize handover manager for systematic LLM handover
-        self.handover_manager = HandoverManager(io=self.io, analytics=self.analytics)
+        self.handover_manager = handover_manager if handover_manager is not None else HandoverManager(io=self.io, analytics=self.analytics)
         self.handover_enabled = auto_handover
         self.auto_handover_threshold = handover_threshold
         self.handover_on_exit = handover_on_exit
@@ -558,6 +580,92 @@ class Coder:
         # Handle session restoration if requested
         if restore_session:
             self.restore_from_handover(restore_session)
+
+        self.num_exhausted_context_windows = num_exhausted_context_windows
+        self.num_malformed_responses = num_malformed_responses
+        self.last_keyboard_interrupt = last_keyboard_interrupt
+        self.num_reflections = num_reflections
+        self.message_cost = message_cost
+        self.shell_commands = shell_commands
+        self.rejected_urls = rejected_urls
+        self.abs_root_path_cache = abs_root_path_cache
+        self.chat_completion_call_hashes = chat_completion_call_hashes
+        self.chat_completion_response_hashes = chat_completion_response_hashes
+        self.need_commit_before_edits = need_commit_before_edits
+
+    def _capture_handover_state(self, trigger_reason: str, trigger_type: str = "automated"):
+        """Capture and save the current session state for handover."""
+        if not self.handover_enabled:
+            return
+
+        try:
+            state = self.handover_manager.capture_current_state(
+                coder=self,
+                reason=trigger_reason,
+                trigger=trigger_type
+            )
+            self.handover_manager.save_handover_state(state)
+        except Exception as e:
+            self.io.tool_error(f"Failed to capture handover state: {e}")
+
+    def _check_handover_conditions(self, trigger_reason: str):
+        """Check conditions for triggering an automated handover."""
+        if not self.handover_enabled:
+            return
+
+        # Condition 1: Context window nearing exhaustion
+        current_tokens = self._estimate_current_token_usage()
+        max_tokens = getattr(self.main_model, 'max_tokens', 0)
+
+        if max_tokens > 0 and current_tokens / max_tokens >= self.auto_handover_threshold:
+            self.io.tool_warning("Context window nearing exhaustion. Triggering handover.")
+            self._capture_handover_state(trigger_reason, "context_limit")
+            return
+
+        # Condition 2: Significant code changes (e.g., after apply_updates)
+        # This will be handled by explicit calls in apply_updates and auto_commit
+
+        # Condition 3: Performance degradation (e.g., too many malformed responses)
+        if self.num_malformed_responses > 3: # Threshold for malformed responses
+            self.io.tool_warning("Too many malformed responses. Triggering handover.")
+            self._capture_handover_state(trigger_reason, "performance_threshold")
+            self.num_malformed_responses = 0 # Reset counter after handover
+            return
+
+        # Condition 4: Other automated triggers (e.g., time-based, specific events)
+        # Can be added here as needed
+
+    def _estimate_current_token_usage(self) -> int:
+        """Estimate current token usage based on chat history and files."""
+        # This is a simplified estimation. A more accurate one would involve
+        # formatting all messages and files as they would be sent to the LLM.
+        estimated_tokens = 0
+
+        # Estimate chat history tokens
+        for msg in self.done_messages + self.cur_messages:
+            if msg.get("content"): # Only count content messages
+                estimated_tokens += self.main_model.token_count(msg["content"])
+
+        # Estimate file content tokens
+        for fname in self.abs_fnames:
+            content = self.io.read_text(fname)
+            if content:
+                estimated_tokens += self.main_model.token_count(content)
+
+        for fname in self.abs_read_only_fnames:
+            content = self.io.read_text(fname)
+            if content:
+                estimated_tokens += self.main_model.token_count(content)
+
+        # Add repo map tokens if enabled
+        if self.repo_map:
+            estimated_tokens += self.repo_map.max_map_tokens
+
+        return estimated_tokens
+
+    def _repo_handover_callback(self, reason: str):
+        """Callback for repo_map to trigger handover."""
+        self._capture_handover_state(reason, "automated")
 
     def setup_lint_cmds(self, lint_cmds):
         if not lint_cmds:
@@ -897,7 +1005,7 @@ class Coder:
         self.test_outcome = None
         
         # Handover state capture before processing message
-        self._capture_handover_state("message_init")
+        self._capture_handover_state("pre_llm_call")
         self.shell_commands = []
         self.message_cost = 0
 
@@ -1462,6 +1570,26 @@ class Coder:
 
         chunks = self.format_messages()
         messages = chunks.all_messages()
+
+        # Estimate cost of the LLM call
+        estimated_input_tokens = self.main_model.token_count(messages)
+        # Assuming average response length for estimation
+        estimated_output_tokens = 500 
+        estimated_cost = self.cost_estimator.estimate_cost(self.main_model.name, estimated_input_tokens, estimated_output_tokens)
+
+        # Check budget before making the LLM call
+        if self.budget_manager and not self.budget_manager.approved:
+            if self.budget_manager.should_cutoff(estimated_cost) and not self.no_auto_switch:
+                self.io.tool_warning("Budget exceeded and auto-switch enabled. Switching to execution tier.")
+                new_model_name = self.tier_router.get_current_tier(self.budget_manager.cumulative_spend)
+                self.main_model = models.Model(new_model_name) # Switch model
+                self.io.tool_output(f"Switched LLM to: {self.main_model.name}")
+            elif self.budget_manager.should_notify(estimated_cost):
+                self.io.tool_warning("Approaching budget limit. Consider /budget-approve or a lower tier model.")
+            elif self.budget_manager.cumulative_spend + estimated_cost > self.budget_manager.daily_budget and self.no_auto_switch:
+                self.io.tool_error("Budget exceeded. Please use /budget-approve or reduce your usage.")
+                return
+
         if not self.check_tokens(messages):
             return
         self.warm_cache(chunks)
@@ -1619,8 +1747,10 @@ class Coder:
         edited = self.apply_updates()
 
         if edited:
+            self._capture_handover_state("post_file_update")
             self.aider_edited_files.update(edited)
             saved_message = self.auto_commit(edited)
+            self._capture_handover_state("post_commit")
 
             if not saved_message and hasattr(self.gpt_prompts, "files_content_gpt_edits_no_repo"):
                 saved_message = self.gpt_prompts.files_content_gpt_edits_no_repo
@@ -1732,6 +1862,8 @@ class Coder:
     def __del__(self):
         """Cleanup when the Coder object is destroyed."""
         self.ok_to_warm_cache = False
+        if self.handover_enabled and self.handover_on_exit:
+            self._capture_handover_state("on_exit", "automated")
 
     def add_assistant_reply_to_cur_messages(self):
         if self.partial_response_content:
@@ -1843,6 +1975,8 @@ class Coder:
 
             # Calculate costs for successful responses
             self.calculate_and_show_tokens_and_cost(messages, completion)
+            if self.budget_manager:
+                self.budget_manager.add_spend(self.message_cost)
 
         except LiteLLMExceptions().exceptions_tuple() as err:
             ex_info = LiteLLMExceptions().get_ex_info(err)

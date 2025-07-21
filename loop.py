@@ -12,6 +12,9 @@ from atlas_config import get_openrouter_api_key
 from aider.openrouter_client import send_prompt_to_openrouter
 from aider.handover_manager import HandoverManager
 from aider.handover_generator import HandoverDocumentGenerator
+from aider.cost_estimator import CostEstimator
+from aider.tier_router import TierRouter
+from aider.budget_manager import BudgetManager
 
 # Basic OpenRouter setup if not already in env
 dspy.settings.configure(
@@ -32,7 +35,7 @@ class CodeAgent:
     """
     A simplified agent to interact with the environment using provided tools.
     """
-    def __init__(self, auto_commit: bool = True, dry_run: bool = False, log_file: str = None, default_api=None, enable_handover: bool = True):
+    def __init__(self, auto_commit: bool = True, dry_run: bool = False, log_file: str = None, default_api=None, enable_handover: bool = True, cost_estimator=None, budget_manager=None, tier_router=None, no_auto_switch: bool = False):
         self.auto_commit = auto_commit
         self.dry_run = dry_run
         self.default_api = default_api
@@ -40,6 +43,11 @@ class CodeAgent:
         self.session_start_time = time.time()
         self.instructions_processed = 0
         self.handover_threshold = 50  # Number of instructions before considering handover
+        
+        self.cost_estimator = cost_estimator
+        self.budget_manager = budget_manager
+        self.tier_router = tier_router
+        self.no_auto_switch = no_auto_switch
         
         # Initialize handover system
         if self.enable_handover:
@@ -280,39 +288,7 @@ class CodeAgent:
         else:
             print("✅ Session continuing normally")
 
-def process_yolo_instruction(instruction: str) -> list[str]:
-    try:
-        # Define prompt
-        prompt = dspy.Predict(
-            "instruction -> steps",
-            description="Expand vague development instruction into a list of actionable engineering steps."
-        )
-
-        # Run prediction
-        result = prompt(instruction=instruction)
-
-        # Extract and split
-        raw_output = result.steps.strip()
-        steps = [line.strip("-• ") for line in raw_output.splitlines() if line.strip()]
-
-        # Logging
-        os.makedirs("logs", exist_ok=True)
-        with open("logs/yolo_expansions.log", "a") as log:
-            log.write(f"\n=== YOLO EXPANSION ===\n")
-            log.write(f"Timestamp: {datetime.now().isoformat()}\n")
-            log.write(f"Original: {instruction}\n")
-            log.write(f"Expanded:\n")
-            for step in steps:
-                log.write(f"- {step}\n")
-            log.write(f"======================= \n")
-
-        return steps or [instruction]
-
-    except Exception as e:
-        # Fallback on failure
-        with open("logs/yolo_expansions.log", "a") as log:
-            log.write(f"\n[ERROR] Failed to expand: {instruction} | {e}\n")
-        return [instruction]
+def process_yolo_instruction(agent: CodeAgent, instruction: str) -> list[str]:    try:        # Estimate cost for dspy.Predict call        # This is a rough estimate, actual cost depends on prompt complexity and response length        estimated_input_tokens = len(instruction.split()) + 100 # Add some buffer for prompt overhead        estimated_output_tokens = 500 # Assuming average expansion length        estimated_cost = agent.cost_estimator.estimate_cost(agent.tier_router.model_tiers.get("planning"), estimated_input_tokens, estimated_output_tokens)        # Check budget before making the LLM call        if agent.budget_manager.should_cutoff(estimated_cost) and not agent.no_auto_switch:            logging.warning("Budget exceeded for YOLO mode and auto-switch enabled. Skipping YOLO expansion.")            return [instruction] # Return original instruction if budget cut off        elif agent.budget_manager.should_notify(estimated_cost):            logging.warning("Approaching budget limit for YOLO mode. Consider /budget-approve or a lower tier model.")        # Define prompt        prompt = dspy.Predict(            "instruction -> steps",            description="Expand vague development instruction into a list of actionable engineering steps."        )        # Run prediction        result = prompt(instruction=instruction)        # Update budget manager with actual cost (assuming actual tokens are similar to estimated)        agent.budget_manager.add_spend(estimated_cost)        # Extract and split        raw_output = result.steps.strip()        steps = [line.strip("-• ") for line in raw_output.splitlines() if line.strip()]        # Logging        os.makedirs("logs", exist_ok=True)        with open("logs/yolo_expansions.log", "a") as log:            log.write(f"\n=== YOLO EXPANSION ===\n")            log.write(f"Timestamp: {datetime.now().isoformat()}\n")            log.write(f"Original: {instruction}\n")            log.write(f"Expanded:\n")            for step in steps:                log.write(f"- {step}\n")            log.write(f"======================= \n")        return steps or [instruction]    except Exception as e:        # Fallback on failure        with open("logs/yolo_expansions.log", "a") as log:            log.write(f"\n[ERROR] Failed to expand: {instruction} | {e}\n")        return [instruction]
 
 def process_plain_instruction(agent: CodeAgent, instruction: str):
     """
@@ -464,14 +440,59 @@ def main(default_api_instance=None):
     parser.add_argument("--prompt", help="Provide a prompt string to send to the LLM")
     parser.add_argument("--handover-threshold", type=int, default=50, help="Number of instructions before considering handover (default: 50)")
     parser.add_argument("--no-handover", action="store_true", help="Disable handover system")
+    parser.add_argument("--daily-budget", type=float, default=1.50, help="Daily budget in USD for LLM API calls")
+    parser.add_argument("--notify-thresholds", type=str, default="0.8,1.0", help="Comma-separated fractions of daily budget to trigger notifications")
+    parser.add_argument("--cutoff-time", type=str, default="17:00", help="24-hour local time for automatic tier downgrade (HH:MM)")
+    parser.add_argument("--model-tier-planning", type=str, default="google/gemini-2.0-flash-001", help="Model for planning tier")
+    parser.add_argument("--model-tier-drafting", type=str, default="deepseek/deepseek-chat-v3-0324", help="Model for drafting tier")
+    parser.add_argument("--model-tier-execution", type=str, default="google/gemini-2.0-flash-lite-001", help="Model for execution tier")
+    parser.add_argument("--no-auto-switch", action="store_true", help="Disable automatic tier downgrade when over budget")
     args = parser.parse_args()
+
+    # Parse notify thresholds
+    notify_thresholds = [float(t) for t in args.notify_thresholds.split(',')]
+
+    # Initialize CostEstimator (assuming model prices are available from a source like litellm)
+    # For now, we'll use a dummy dict. In a real scenario, this would come from litellm.model_cost
+    model_prices = {
+        "google/gemini-2.0-flash-001": {"input_cost_per_million_tokens": 2.0, "output_cost_per_million_tokens": 4.0},
+        "deepseek/deepseek-chat-v3-0324": {"input_cost_per_million_tokens": 1.0, "output_cost_per_million_tokens": 2.0},
+        "google/gemini-2.0-flash-lite-001": {"input_cost_per_million_tokens": 0.5, "output_cost_per_million_tokens": 1.0},
+        # Add other model prices as needed
+    }
+    cost_estimator = CostEstimator(model_prices)
+
+    # Initialize BudgetManager
+    budget_manager = BudgetManager(
+        daily_budget=args.daily_budget,
+        notify_thresholds=notify_thresholds,
+        cutoff_time=args.cutoff_time,
+        io=logging # Pass logging for warnings/errors
+    )
+
+    # Initialize TierRouter
+    model_tiers = {
+        "planning": args.model_tier_planning,
+        "drafting": args.model_tier_drafting,
+        "execution": args.model_tier_execution,
+    }
+    tier_router = TierRouter(
+        model_tiers=model_tiers,
+        daily_budget=args.daily_budget,
+        notify_thresholds=notify_thresholds,
+        cutoff_time=args.cutoff_time
+    )
 
     agent = CodeAgent(
         auto_commit=True, 
         dry_run=args.dry_run, 
         log_file=args.log_file, 
         default_api=default_api_instance,
-        enable_handover=not args.no_handover
+        enable_handover=not args.no_handover,
+        cost_estimator=cost_estimator,
+        budget_manager=budget_manager,
+        tier_router=tier_router,
+        no_auto_switch=args.no_auto_switch
     )
     
     # Configure handover threshold
@@ -490,8 +511,26 @@ def main(default_api_instance=None):
     instruction = " ".join(args.instruction)
 
     if args.llm and args.prompt:
+        # Estimate cost of the LLM call
+        # For simplicity, we'll assume a fixed token count for estimation here.
+        # In a real scenario, you'd estimate based on prompt length and expected response.
+        estimated_input_tokens = len(args.prompt.split())
+        estimated_output_tokens = 500 # Assuming an average response length
+        estimated_cost = agent.cost_estimator.estimate_cost(args.llm, estimated_input_tokens, estimated_output_tokens)
+
+        # Check budget before making the LLM call
+        if agent.budget_manager.should_cutoff(estimated_cost) and not agent.no_auto_switch:
+            logging.warning("Budget exceeded and auto-switch enabled. Switching to execution tier.")
+            args.llm = agent.tier_router.get_current_tier(agent.budget_manager.cumulative_spend)
+            logging.info(f"Switched LLM to: {args.llm}")
+        elif agent.budget_manager.should_notify(estimated_cost):
+            logging.warning("Approaching budget limit. Consider /budget-approve or a lower tier model.")
+
         logging.info(f"Sending prompt to LLM ({args.llm}): {args.prompt}")
         raw_response, parsed_response = send_prompt_to_openrouter(args.prompt, args.llm)
+
+        # Update budget manager with actual cost (assuming actual tokens are similar to estimated)
+        agent.budget_manager.add_spend(estimated_cost)
 
         if raw_response and parsed_response:
             logging.info(f"LLM Raw Response: {json.dumps(raw_response, indent=2)}")
@@ -519,7 +558,7 @@ def main(default_api_instance=None):
     
     if args.yolo or args.lazy:
         logging.info("YOLO mode activated. Expanding instruction...")
-        expanded_instructions = process_yolo_instruction(instruction)
+        expanded_instructions = process_yolo_instruction(agent, instruction)
         for exp_instruction in expanded_instructions:
             logging.info(f"Executing expanded instruction: {exp_instruction}")
             
