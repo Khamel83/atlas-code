@@ -3,9 +3,18 @@ import json
 import sys
 import os
 import logging
+from datetime import datetime
+
+import dspy
 
 from atlas_config import get_openrouter_api_key
 from aider.openrouter_client import send_prompt_to_openrouter
+
+# Basic OpenRouter setup if not already in env
+dspy.settings.configure(
+    model='openrouter/google/gemini-pro',
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+)
 
 # Configure logging
 logging.basicConfig(
@@ -114,6 +123,40 @@ class CodeAgent:
         exists = os.path.exists(path)
         logging.info(f"File {path} exists: {exists}")
         return {"exists": exists}
+
+def process_yolo_instruction(instruction: str) -> list[str]:
+    try:
+        # Define prompt
+        prompt = dspy.Predict(
+            "instruction -> steps",
+            description="Expand vague development instruction into a list of actionable engineering steps."
+        )
+
+        # Run prediction
+        result = prompt(instruction=instruction)
+
+        # Extract and split
+        raw_output = result.steps.strip()
+        steps = [line.strip("-• ") for line in raw_output.splitlines() if line.strip()]
+
+        # Logging
+        os.makedirs("logs", exist_ok=True)
+        with open("logs/yolo_expansions.log", "a") as log:
+            log.write(f"\n=== YOLO EXPANSION ===\n")
+            log.write(f"Timestamp: {datetime.now().isoformat()}\n")
+            log.write(f"Original: {instruction}\n")
+            log.write(f"Expanded:\n")
+            for step in steps:
+                log.write(f"- {step}\n")
+            log.write(f"======================= \n")
+
+        return steps or [instruction]
+
+    except Exception as e:
+        # Fallback on failure
+        with open("logs/yolo_expansions.log", "a") as log:
+            log.write(f"\n[ERROR] Failed to expand: {instruction} | {e}\n")
+        return [instruction]
 
 def process_plain_instruction(agent: CodeAgent, instruction: str):
     """
@@ -259,6 +302,8 @@ def main(default_api_instance=None):
     parser.add_argument("instruction", nargs='*', help="Plain-language instruction or JSON string")
     parser.add_argument("--dry-run", action="store_true", help="Simulate actions without making actual changes")
     parser.add_argument("--log-file", help="Path to a file for logging output")
+    parser.add_argument("--yolo", action="store_true", help="Enable idea expansion via dspy")
+    parser.add_argument("--lazy", action="store_true", help="Alias for --yolo (and future relaxed behaviors)")
     parser.add_argument("--llm", help="Specify an LLM model to use (e.g., google/gemini-flash-1.5)")
     parser.add_argument("--prompt", help="Provide a prompt string to send to the LLM")
     args = parser.parse_args()
@@ -300,115 +345,230 @@ def main(default_api_instance=None):
 
     logging.info(f"Received instruction: {instruction}")
 
-    try:
-        # Attempt to parse as JSON first for LLM-generated instructions
-        parsed_json = json.loads(instruction)
-        if isinstance(parsed_json, dict) and "command" in parsed_json:
-            command = parsed_json["command"]
-            args = parsed_json.get("args", {})
-            logging.info(f"Executing JSON command: {command} with args: {args}")
+    if args.yolo or args.lazy:
+        logging.info("YOLO mode activated. Expanding instruction...")
+        expanded_instructions = process_yolo_instruction(instruction)
+        for exp_instruction in expanded_instructions:
+            logging.info(f"Executing expanded instruction: {exp_instruction}")
+            try:
+                # Attempt to parse as JSON first for LLM-generated instructions
+                parsed_json = json.loads(exp_instruction)
+                if isinstance(parsed_json, dict) and "command" in parsed_json:
+                    command = parsed_json["command"]
+                    args = parsed_json.get("args", {})
+                    logging.info(f"Executing JSON command: {command} with args: {args}")
 
-            if command == "read_file":
-                path = args.get("path")
-                if not path:
-                    logging.error("Error: 'path' argument missing for read_file.")
-                    print("Error: 'path' argument missing for read_file.")
-                    return
-                result = agent.read_file(path)
-                if "read_file_response" in result and "output" in result["read_file_response"]:
-                    print(f"Output:\n{result['read_file_response']['output']}")
-                elif "error" in result:
-                    print(f"Error: {result['error']}")
-                elif "dry_run_result" in result:
-                    print(f"Dry Run: {result['dry_run_result']}")
-                else:
-                    print(f"Unexpected tool output: {result}")
-            elif command == "edit_file":
-                path = args.get("path")
-                content = args.get("content")
-                if not path:
-                    logging.error("Error: 'path' argument missing for edit_file.")
-                    print("Error: 'path' argument missing for edit_file.")
-                    return
-                if content is None:
-                    logging.error("Error: 'content' argument missing for edit_file.")
-                    print("Error: 'content' argument missing for edit_file.")
-                    return
-                result = agent.edit_file(path, content)
-                if "write_file_response" in result and "output" in result["write_file_response"]:
-                    print(f"Success: {result['write_file_response']['output']}")
-                elif "error" in result:
-                    print(f"Error: {result['error']}")
-                elif "dry_run_result" in result:
-                    print(f"Dry Run: {result['dry_run_result']}")
-                else:
-                    print(f"Unexpected tool output: {result}")
-            elif command == "run_command":
-                cmd = args.get("cmd")
-                if not cmd:
-                    logging.error("Error: 'cmd' argument missing for run_command.")
-                    print("Error: 'cmd' argument missing for run_command.")
-                    return
-                result = agent.run_command(cmd)
-                if "dry_run_result" in result:
-                    print(f"Dry Run: {result['dry_run_result']}")
-                else:
-                    stdout = result.get("run_shell_command_response", {}).get("Stdout", "")
-                    stderr = result.get("run_shell_command_response", {}).get("Stderr", "")
-                    error = result.get("run_shell_command_response", {}).get("Error", "")
-                    exit_code = result.get("run_shell_command_response", {}).get("Exit Code", "")
+                    if command == "read_file":
+                        path = args.get("path")
+                        if not path:
+                            logging.error("Error: 'path' argument missing for read_file.")
+                            print("Error: 'path' argument missing for read_file.")
+                            return
+                        result = agent.read_file(path)
+                        if "read_file_response" in result and "output" in result["read_file_response"]:
+                            print(f"Output:\n{result['read_file_response']['output']}")
+                        elif "error" in result:
+                            print(f"Error: {result['error']}")
+                        elif "dry_run_result" in result:
+                            print(f"Dry Run: {result['dry_run_result']}")
+                        else:
+                            print(f"Unexpected tool output: {result}")
+                    elif command == "edit_file":
+                        path = args.get("path")
+                        content = args.get("content")
+                        if not path:
+                            logging.error("Error: 'path' argument missing for edit_file.")
+                            print("Error: 'path' argument missing for edit_file.")
+                            return
+                        if content is None:
+                            logging.error("Error: 'content' argument missing for edit_file.")
+                            print("Error: 'content' argument missing for edit_file.")
+                            return
+                        result = agent.edit_file(path, content)
+                        if "write_file_response" in result and "output" in result["write_file_response"]:
+                            print(f"Success: {result['write_file_response']['output']}")
+                        elif "error" in result:
+                            print(f"Error: {result['error']}")
+                        elif "dry_run_result" in result:
+                            print(f"Dry Run: {result['dry_run_result']}")
+                        else:
+                            print(f"Unexpected tool output: {result}")
+                    elif command == "run_command":
+                        cmd = args.get("cmd")
+                        if not cmd:
+                            logging.error("Error: 'cmd' argument missing for run_command.")
+                            print("Error: 'cmd' argument missing for run_command.")
+                            return
+                        result = agent.run_command(cmd)
+                        if "dry_run_result" in result:
+                            print(f"Dry Run: {result['dry_run_result']}")
+                        else:
+                            stdout = result.get("run_shell_command_response", {}).get("Stdout", "")
+                            stderr = result.get("run_shell_command_response", {}).get("Stderr", "")
+                            error = result.get("run_shell_command_response", {}).get("Error", "")
+                            exit_code = result.get("run_shell_command_response", {}).get("Exit Code", "")
 
-                    print(f"Stdout:\n{stdout}")
-                    if stderr:
-                        print(f"Stderr:\n{stderr}")
-                    if error and error != "(none)":
-                        print(f"Tool Error: {error}")
-                    if exit_code and exit_code != 0:
-                        print(f"Command exited with code: {exit_code}")
-            elif command == "save_snapshot":
-                message = args.get("message", "auto: save snapshot")
-                result = agent.save_snapshot(message)
-                if "success" in result:
-                    print(f"Success: {result['success']}")
-                elif "error" in result:
-                    print(f"Error: {result['error']}")
-                elif "dry_run_result" in result:
-                    print(f"Dry Run: {result['dry_run_result']}")
+                            print(f"Stdout:\n{stdout}")
+                            if stderr:
+                                print(f"Stderr:\n{stderr}")
+                            if error and error != "(none)":
+                                print(f"Tool Error: {error}")
+                            if exit_code and exit_code != 0:
+                                print(f"Command exited with code: {exit_code}")
+                    elif command == "save_snapshot":
+                        message = args.get("message", "auto: save snapshot")
+                        result = agent.save_snapshot(message)
+                        if "success" in result:
+                            print(f"Success: {result['success']}")
+                        elif "error" in result:
+                            print(f"Error: {result['error']}")
+                        elif "dry_run_result" in result:
+                            print(f"Dry Run: {result['dry_run_result']}")
+                        else:
+                            print(f"Unexpected tool output: {result}")
+                    elif command == "run_task_queue":
+                        file_path = args.get("file")
+                        if not file_path:
+                            logging.error("Error: 'file' argument missing for run_task_queue.")
+                            print("Error: 'file' argument missing for run_task_queue.")
+                            return
+                        run_task_queue(agent, file_path)
+                    elif command == "check_file_exists":
+                        path = args.get("path")
+                        if not path:
+                            logging.error("Error: 'path' argument missing for check_file_exists.")
+                            print("Error: 'path' argument missing for check_file_exists.")
+                            return
+                        result = agent.check_file_exists(path)
+                        if "exists" in result:
+                            print(f"File exists: {result['exists']}")
+                        elif "dry_run_result" in result:
+                            print(f"Dry Run: {result['dry_run_result']}")
+                        else:
+                            print(f"Unexpected tool output: {result}")
+                    else:
+                        logging.error(f"Error: Unknown command in JSON: {command}")
+                        print(f"Error: Unknown command in JSON: {command}")
                 else:
-                    print(f"Unexpected tool output: {result}")
-            elif command == "run_task_queue":
-                file_path = args.get("file")
-                if not file_path:
-                    logging.error("Error: 'file' argument missing for run_task_queue.")
-                    print("Error: 'file' argument missing for run_task_queue.")
-                    return
-                run_task_queue(agent, file_path)
-            elif command == "check_file_exists":
-                path = args.get("path")
-                if not path:
-                    logging.error("Error: 'path' argument missing for check_file_exists.")
-                    print("Error: 'path' argument missing for check_file_exists.")
-                    return
-                result = agent.check_file_exists(path)
-                if "exists" in result:
-                    print(f"File exists: {result['exists']}")
-                elif "dry_run_result" in result:
-                    print(f"Dry Run: {result['dry_run_result']}")
+                    # Fallback to simple keyword parsing for plain-language instructions
+                    process_plain_instruction(agent, exp_instruction)
+
+            except json.JSONDecodeError:
+                # Not a JSON, process as plain language
+                process_plain_instruction(agent, exp_instruction)
+            except Exception as e:
+                logging.critical(f"An unexpected error occurred: {e}", exc_info=True)
+                print(f"An unexpected error occurred: {e}")
+    else:
+        try:
+            # Attempt to parse as JSON first for LLM-generated instructions
+            parsed_json = json.loads(instruction)
+            if isinstance(parsed_json, dict) and "command" in parsed_json:
+                command = parsed_json["command"]
+                args = parsed_json.get("args", {})
+                logging.info(f"Executing JSON command: {command} with args: {args}")
+
+                if command == "read_file":
+                    path = args.get("path")
+                    if not path:
+                        logging.error("Error: 'path' argument missing for read_file.")
+                        print("Error: 'path' argument missing for read_file.")
+                        return
+                    result = agent.read_file(path)
+                    if "read_file_response" in result and "output" in result["read_file_response"]:
+                        print(f"Output:\n{result['read_file_response']['output']}")
+                    elif "error" in result:
+                        print(f"Error: {result['error']}")
+                    elif "dry_run_result" in result:
+                        print(f"Dry Run: {result['dry_run_result']}")
+                    else:
+                        print(f"Unexpected tool output: {result}")
+                elif command == "edit_file":
+                    path = args.get("path")
+                    content = args.get("content")
+                    if not path:
+                        logging.error("Error: 'path' argument missing for edit_file.")
+                        print("Error: 'path' argument missing for edit_file.")
+                        return
+                    if content is None:
+                        logging.error("Error: 'content' argument missing for edit_file.")
+                        print("Error: 'content' argument missing for edit_file.")
+                        return
+                    result = agent.edit_file(path, content)
+                    if "write_file_response" in result and "output" in result["write_file_response"]:
+                        print(f"Success: {result['write_file_response']['output']}")
+                    elif "error" in result:
+                        print(f"Error: {result['error']}")
+                    elif "dry_run_result" in result:
+                        print(f"Dry Run: {result['dry_run_result']}")
+                    else:
+                        print(f"Unexpected tool output: {result}")
+                elif command == "run_command":
+                    cmd = args.get("cmd")
+                    if not cmd:
+                        logging.error("Error: 'cmd' argument missing for run_command.")
+                        print("Error: 'cmd' argument missing for run_command.")
+                        return
+                    result = agent.run_command(cmd)
+                    if "dry_run_result" in result:
+                        print(f"Dry Run: {result['dry_run_result']}")
+                    else:
+                        stdout = result.get("run_shell_command_response", {}).get("Stdout", "")
+                        stderr = result.get("run_shell_command_response", {}).get("Stderr", "")
+                        error = result.get("run_shell_command_response", {}).get("Error", "")
+                        exit_code = result.get("run_shell_command_response", {}).get("Exit Code", "")
+
+                        print(f"Stdout:\n{stdout}")
+                        if stderr:
+                            print(f"Stderr:\n{stderr}")
+                        if error and error != "(none)":
+                            print(f"Tool Error: {error}")
+                        if exit_code and exit_code != 0:
+                            print(f"Command exited with code: {exit_code}")
+                elif command == "save_snapshot":
+                    message = args.get("message", "auto: save snapshot")
+                    result = agent.save_snapshot(message)
+                    if "success" in result:
+                        print(f"Success: {result['success']}")
+                    elif "error" in result:
+                        print(f"Error: {result['error']}")
+                    elif "dry_run_result" in result:
+                        print(f"Dry Run: {result['dry_run_result']}")
+                    else:
+                        print(f"Unexpected tool output: {result}")
+                elif command == "run_task_queue":
+                    file_path = args.get("file")
+                    if not file_path:
+                        logging.error("Error: 'file' argument missing for run_task_queue.")
+                        print("Error: 'file' argument missing for run_task_queue.")
+                        return
+                    run_task_queue(agent, file_path)
+                elif command == "check_file_exists":
+                    path = args.get("path")
+                    if not path:
+                        logging.error("Error: 'path' argument missing for check_file_exists.")
+                        print("Error: 'path' argument missing for check_file_exists.")
+                        return
+                    result = agent.check_file_exists(path)
+                    if "exists" in result:
+                        print(f"File exists: {result['exists']}")
+                    elif "dry_run_result" in result:
+                        print(f"Dry Run: {result['dry_run_result']}")
+                    else:
+                        print(f"Unexpected tool output: {result}")
                 else:
-                    print(f"Unexpected tool output: {result}")
+                    logging.error(f"Error: Unknown command in JSON: {command}")
+                    print(f"Error: Unknown command in JSON: {command}")
             else:
-                logging.error(f"Error: Unknown command in JSON: {command}")
-                print(f"Error: Unknown command in JSON: {command}")
-        else:
-            # Fallback to simple keyword parsing for plain-language instructions
-            process_plain_instruction(agent, instruction)
+                # Fallback to simple keyword parsing for plain-language instructions
+                process_plain_instruction(agent, instruction)
 
-    except json.JSONDecodeError:
-        # Not a JSON, process as plain language
-        process_plain_instruction(agent, instruction)
-    except Exception as e:
-        logging.critical(f"An unexpected error occurred: {e}", exc_info=True)
-        print(f"An unexpected error occurred: {e}")
+        except json.JSONDecodeError:
+            # Not a JSON, process as plain language
+            process_plain_instruction(agent, instruction)
+        except Exception as e:
+            logging.critical(f"An unexpected error occurred: {e}", exc_info=True)
+            print(f"An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
     # In the Gemini CLI environment, default_api is implicitly available.
