@@ -14,6 +14,7 @@ import threading
 import time
 import traceback
 from collections import defaultdict
+from dataclasses import asdict
 from datetime import datetime
 
 # Optional dependency: used to convert locale codes (eg ``en_US``)
@@ -32,6 +33,7 @@ from aider import __version__, models, prompts, urls, utils
 from aider.analytics import Analytics
 from aider.commands import Commands
 from aider.exceptions import LiteLLMExceptions
+from aider.handover_manager import HandoverManager
 from aider.history import ChatSummary
 from aider.io import ConfirmGroup, InputOutput
 from aider.linter import Linter
@@ -129,6 +131,7 @@ class Coder:
         io=None,
         from_coder=None,
         summarize_from_coder=True,
+        silent=False,
         **kwargs,
     ):
         import aider.coders as coders
@@ -338,6 +341,10 @@ class Coder:
         file_watcher=None,
         auto_copy_context=False,
         auto_accept_architect=True,
+        handover_threshold=0.8,
+        auto_handover=True,
+        handover_on_exit=True,
+        restore_session=None,
     ):
         # Fill in a dummy Analytics if needed, but it is never .enable()'d
         self.analytics = analytics if analytics is not None else Analytics()
@@ -505,6 +512,7 @@ class Coder:
                 max_inp_tokens,
                 map_mul_no_files=map_mul_no_files,
                 refresh=map_refresh,
+                handover_callback=self._repo_handover_callback if hasattr(self, 'handover_enabled') and self.handover_enabled else None,
             )
 
         self.summarizer = summarizer or ChatSummary(
@@ -541,6 +549,16 @@ class Coder:
                 self.io.tool_output("JSON Schema:")
                 self.io.tool_output(json.dumps(self.functions, indent=4))
 
+        # Initialize handover manager for systematic LLM handover
+        self.handover_manager = HandoverManager(io=self.io, analytics=self.analytics)
+        self.handover_enabled = auto_handover
+        self.auto_handover_threshold = handover_threshold
+        self.handover_on_exit = handover_on_exit
+        
+        # Handle session restoration if requested
+        if restore_session:
+            self.restore_from_handover(restore_session)
+
     def setup_lint_cmds(self, lint_cmds):
         if not lint_cmds:
             return
@@ -548,6 +566,8 @@ class Coder:
             self.linter.set_linter(lang, cmd)
 
     def show_announcements(self):
+        if self.io.silent:
+            return
         bold = True
         for line in self.get_announcements():
             self.io.tool_output(line, bold=bold)
@@ -710,6 +730,10 @@ class Coder:
         if not self.repo_map:
             return
 
+        # Capture handover state before major repository mapping operations
+        if force_refresh and self.handover_enabled:
+            self._capture_handover_state("repo_map_refresh")
+
         cur_msg_text = self.get_cur_message_text()
         mentioned_fnames = self.get_file_mentions(cur_msg_text)
         mentioned_idents = self.get_ident_mentions(cur_msg_text)
@@ -720,6 +744,10 @@ class Coder:
         repo_abs_read_only_fnames = set(self.abs_read_only_fnames) & all_abs_files
         chat_files = set(self.abs_fnames) | repo_abs_read_only_fnames
         other_files = all_abs_files - chat_files
+
+        # Check if this is a large repository operation that might trigger handover
+        if self.handover_enabled and len(other_files) > 1000:
+            self._check_handover_conditions("large_repo_map")
 
         repo_content = self.repo_map.get_repo_map(
             chat_files,
@@ -867,6 +895,9 @@ class Coder:
         self.num_reflections = 0
         self.lint_outcome = None
         self.test_outcome = None
+        
+        # Handover state capture before processing message
+        self._capture_handover_state("message_init")
         self.shell_commands = []
         self.message_cost = 0
 
@@ -1418,6 +1449,9 @@ class Coder:
 
     def send_message(self, inp):
         self.event("message_send_starting")
+
+        # Check for handover conditions before sending message
+        self._check_handover_conditions("pre_message")
 
         # Notify IO that LLM processing is starting
         self.io.llm_started()
@@ -2483,3 +2517,231 @@ class Coder:
             line_plural = "line" if num_lines == 1 else "lines"
             self.io.tool_output(f"Added {num_lines} {line_plural} of output to the chat.")
             return accumulated_output
+    
+    # ====== HANDOVER SYSTEM METHODS ======
+    
+    def _check_handover_conditions(self, trigger_point):
+        """Check if handover conditions are met and potentially trigger handover"""
+        if not self.handover_enabled:
+            return
+        
+        try:
+            # Check context window usage
+            if hasattr(self, 'main_model') and hasattr(self.main_model, 'max_tokens'):
+                current_tokens = self._estimate_current_token_usage()
+                max_tokens = self.main_model.max_tokens
+                
+                if max_tokens > 0:
+                    usage_ratio = current_tokens / max_tokens
+                    
+                    if usage_ratio >= self.auto_handover_threshold:
+                        self._trigger_handover(
+                            reason="context_window_exhausted",
+                            trigger="automatic",
+                            details=f"Token usage: {current_tokens}/{max_tokens} ({usage_ratio:.1%})"
+                        )
+                        return
+            
+            # Check exhausted context windows count
+            if self.num_exhausted_context_windows >= 2:
+                self._trigger_handover(
+                    reason="performance_degradation",
+                    trigger="automatic", 
+                    details=f"Context windows exhausted {self.num_exhausted_context_windows} times"
+                )
+                return
+            
+            # Check malformed responses
+            if self.num_malformed_responses >= 3:
+                self._trigger_handover(
+                    reason="performance_degradation",
+                    trigger="automatic",
+                    details=f"Malformed responses: {self.num_malformed_responses}"
+                )
+                return
+                
+        except Exception as e:
+            if self.io:
+                self.io.tool_error(f"Error checking handover conditions: {e}")
+    
+    def _capture_handover_state(self, trigger_point):
+        """Capture current session state for potential handover"""
+        if not self.handover_enabled:
+            return
+        
+        try:
+            # Update handover state periodically
+            state = self.handover_manager.capture_current_state(
+                coder=self,
+                reason="state_capture",
+                trigger=trigger_point
+            )
+            
+            # Save state for potential handover
+            self.handover_manager.save_handover_state(state)
+            
+        except Exception as e:
+            if self.io:
+                self.io.tool_error(f"Error capturing handover state: {e}")
+    
+    def _trigger_handover(self, reason, trigger, details=None):
+        """Trigger immediate handover process"""
+        try:
+            if self.io:
+                self.io.tool_output(f"Triggering handover: {reason}")
+                if details:
+                    self.io.tool_output(f"Details: {details}")
+            
+            # Capture final state
+            state = self.handover_manager.capture_current_state(
+                coder=self,
+                reason=reason,
+                trigger=trigger
+            )
+            
+            # Validate handover readiness
+            validation = self.handover_manager.validate_handover_readiness(state)
+            
+            if not validation["is_valid"]:
+                if self.io:
+                    self.io.tool_error(f"Handover validation failed: {validation['errors']}")
+                return False
+            
+            # Save handover state
+            state_file = self.handover_manager.save_handover_state(state)
+            
+            # Generate handover document
+            from aider.handover_generator import HandoverDocumentGenerator
+            generator = HandoverDocumentGenerator(self.handover_manager)
+            document = generator.generate_full_handover_document(self, reason, trigger)
+            generator.update_handover_md_file(document)
+            
+            # Trigger GitHub integration for automated push and artifact management
+            production_report = None
+            if "production" in reason.lower() or "deploy" in reason.lower():
+                try:
+                    from aider.production_validator import ProductionReadinessValidator
+                    validator = ProductionReadinessValidator(io=self.io, root_path=self.root)
+                    prod_result = validator.validate_project(coder=self)
+                    production_report = asdict(prod_result) if prod_result else None
+                except Exception as e:
+                    if self.io:
+                        self.io.tool_warning(f"Could not generate production report: {e}")
+            
+            # Trigger GitHub integration
+            github_result = self.handover_manager.trigger_github_integration(
+                handover_state_file=state_file,
+                production_report=production_report,
+                reason=reason,
+                auto_push=True
+            )
+            
+            if self.io:
+                self.io.tool_output(f"Handover complete. State saved to: {state_file}")
+                self.io.tool_output(f"Readiness score: {validation.get('readiness_score', 0):.1%}")
+                if validation.get("warnings"):
+                    self.io.tool_output(f"Warnings: {len(validation['warnings'])}")
+                
+                # Report GitHub integration results
+                if github_result.get("success"):
+                    self.io.tool_output("🔗 GitHub integration: ✅ Complete")
+                    if github_result.get("remote_urls"):
+                        self.io.tool_output(f"📤 Pushed to: {len(github_result['remote_urls'])} remote(s)")
+                elif github_result.get("reason") == "no_remote":
+                    self.io.tool_output("🔗 GitHub integration: ⏭️ No remote repository")
+                else:
+                    self.io.tool_output("🔗 GitHub integration: ⚠️ Completed with warnings")
+            
+            return True
+            
+        except Exception as e:
+            if self.io:
+                self.io.tool_error(f"Error during handover: {e}")
+            return False
+    
+    def _estimate_current_token_usage(self):
+        """Estimate current token usage for context window management"""
+        try:
+            # Rough estimation based on message content
+            total_chars = 0
+            
+            # Count characters in current messages
+            for msg in self.cur_messages + self.done_messages:
+                if isinstance(msg, dict) and 'content' in msg:
+                    total_chars += len(str(msg['content']))
+            
+            # Rough conversion: 4 characters ≈ 1 token
+            estimated_tokens = total_chars // 4
+            
+            # Add overhead for system prompts, functions, etc.
+            overhead_tokens = 1000
+            
+            return estimated_tokens + overhead_tokens
+            
+        except Exception:
+            return 0
+    
+    def perform_manual_handover(self, reason="manual"):
+        """Manually trigger handover process"""
+        return self._trigger_handover(reason=reason, trigger="user_request")
+    
+    def restore_from_handover(self, state_file=None):
+        """Restore session from handover state"""
+        try:
+            state = self.handover_manager.load_handover_state(state_file)
+            if not state:
+                if self.io:
+                    self.io.tool_error("No valid handover state found")
+                return False
+            
+            # Restore file context
+            if state.active_files:
+                self.abs_fnames = set(state.active_files)
+            if state.read_only_files:
+                self.abs_read_only_fnames = set(state.read_only_files)
+            
+            # Restore model settings if different
+            if (hasattr(self.main_model, 'name') and 
+                state.main_model.get('name') != self.main_model.name):
+                if self.io:
+                    self.io.tool_output(f"Model mismatch: current={self.main_model.name}, state={state.main_model.get('name')}")
+            
+            # Restore session context
+            if state.conversation_context:
+                if 'total_cost' in state.conversation_context:
+                    self.total_cost = state.conversation_context['total_cost']
+                if 'num_exhausted_context_windows' in state.conversation_context:
+                    self.num_exhausted_context_windows = state.conversation_context['num_exhausted_context_windows']
+            
+            if self.io:
+                self.io.tool_output(f"Restored session from handover state: {state.session_id}")
+                self.io.tool_output(f"Active files: {len(state.active_files)}")
+                self.io.tool_output(f"Session duration: {state.session_duration:.1f}s")
+            
+            return True
+            
+        except Exception as e:
+            if self.io:
+                self.io.tool_error(f"Error restoring from handover: {e}")
+            return False
+    
+    def _repo_handover_callback(self, reason, trigger):
+        """Callback for repository mapping handover triggers"""
+        try:
+            if self.handover_enabled and hasattr(self, 'handover_manager'):
+                if self.verbose:
+                    self.io.tool_output(f"Repository handover trigger: {reason} ({trigger})")
+                
+                # Capture handover state for repository operations
+                self._capture_handover_state(f"repo_{trigger}")
+                
+                # Check if immediate handover is needed for very large operations
+                if "large_repo" in reason and trigger == "repo_map_generation":
+                    self._trigger_handover(
+                        reason=f"Large repository operation detected",
+                        trigger="repo_map_large_operation",
+                        details={"reason": reason, "trigger": trigger}
+                    )
+        except Exception as e:
+            if self.io:
+                self.io.tool_warning(f"Repository handover callback failed: {e}")

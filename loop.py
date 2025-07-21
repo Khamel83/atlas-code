@@ -3,12 +3,15 @@ import json
 import sys
 import os
 import logging
+import time
 from datetime import datetime
 
 import dspy
 
 from atlas_config import get_openrouter_api_key
 from aider.openrouter_client import send_prompt_to_openrouter
+from aider.handover_manager import HandoverManager
+from aider.handover_generator import HandoverDocumentGenerator
 
 # Basic OpenRouter setup if not already in env
 dspy.settings.configure(
@@ -29,10 +32,25 @@ class CodeAgent:
     """
     A simplified agent to interact with the environment using provided tools.
     """
-    def __init__(self, auto_commit: bool = True, dry_run: bool = False, log_file: str = None, default_api=None):
+    def __init__(self, auto_commit: bool = True, dry_run: bool = False, log_file: str = None, default_api=None, enable_handover: bool = True):
         self.auto_commit = auto_commit
         self.dry_run = dry_run
         self.default_api = default_api
+        self.enable_handover = enable_handover
+        self.session_start_time = time.time()
+        self.instructions_processed = 0
+        self.handover_threshold = 50  # Number of instructions before considering handover
+        
+        # Initialize handover system
+        if self.enable_handover:
+            try:
+                self.handover_manager = HandoverManager()
+                self.handover_generator = HandoverDocumentGenerator(self.handover_manager)
+                logging.info("Handover system initialized for loop.py session")
+            except Exception as e:
+                logging.warning(f"Failed to initialize handover system: {e}")
+                self.enable_handover = False
+        
         if log_file:
             file_handler = logging.FileHandler(log_file)
             file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
@@ -123,6 +141,144 @@ class CodeAgent:
         exists = os.path.exists(path)
         logging.info(f"File {path} exists: {exists}")
         return {"exists": exists}
+    
+    def _check_handover_conditions(self):
+        """Check if handover conditions are met for loop.py session"""
+        if not self.enable_handover:
+            return False
+        
+        try:
+            # Check instruction count threshold
+            if self.instructions_processed >= self.handover_threshold:
+                logging.info(f"Handover threshold reached: {self.instructions_processed} instructions processed")
+                return True
+            
+            # Check session duration (handover after 30 minutes)
+            session_duration = time.time() - self.session_start_time
+            if session_duration > 1800:  # 30 minutes
+                logging.info(f"Session duration threshold reached: {session_duration:.1f} seconds")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logging.warning(f"Error checking handover conditions: {e}")
+            return False
+    
+    def capture_handover_state(self, reason="session_checkpoint", trigger="automatic"):
+        """Capture current loop.py session state for handover"""
+        if not self.enable_handover:
+            return None
+        
+        try:
+            # Create a mock coder-like object for handover state capture
+            mock_session = {
+                'session_type': 'loop.py',
+                'session_start_time': self.session_start_time,
+                'instructions_processed': self.instructions_processed,
+                'handover_threshold': self.handover_threshold,
+                'working_directory': os.getcwd(),
+                'session_duration': time.time() - self.session_start_time
+            }
+            
+            # Capture state using handover manager
+            state = self.handover_manager.capture_current_state(
+                coder=None,  # loop.py doesn't use a coder object
+                reason=reason,
+                trigger=trigger
+            )
+            
+            # Add loop.py specific context
+            if hasattr(state, 'conversation_context'):
+                state.conversation_context.update(mock_session)
+            
+            # Save state
+            state_file = self.handover_manager.save_handover_state(state)
+            logging.info(f"Loop.py handover state captured: {state_file}")
+            
+            return state_file
+            
+        except Exception as e:
+            logging.error(f"Failed to capture handover state: {e}")
+            return None
+    
+    def trigger_handover(self, reason="automatic", manual=False):
+        """Trigger handover process for loop.py session"""
+        if not self.enable_handover:
+            logging.warning("Handover system not enabled")
+            return False
+        
+        try:
+            trigger_type = "manual" if manual else "automatic"
+            logging.info(f"Triggering handover: {reason} ({trigger_type})")
+            
+            # Capture final state
+            state_file = self.capture_handover_state(reason=reason, trigger=trigger_type)
+            
+            if state_file:
+                # Generate handover document
+                document = self.handover_generator.generate_full_handover_document(
+                    coder=None, reason=reason, trigger=trigger_type
+                )
+                
+                # Update LLM_HANDOVER.md
+                self.handover_generator.update_handover_md_file(document)
+                
+                print(f"\n🔄 Handover Complete")
+                print(f"Reason: {reason}")
+                print(f"State saved to: {state_file}")
+                print(f"Instructions processed: {self.instructions_processed}")
+                print(f"Session duration: {time.time() - self.session_start_time:.1f}s")
+                print(f"Updated: LLM_HANDOVER.md")
+                
+                return True
+            else:
+                logging.error("Failed to capture handover state")
+                return False
+                
+        except Exception as e:
+            logging.error(f"Error during handover: {e}")
+            return False
+    
+    def process_instruction(self, instruction):
+        """Process instruction and check for handover conditions"""
+        self.instructions_processed += 1
+        
+        # Check for handover conditions every 10 instructions
+        if self.instructions_processed % 10 == 0:
+            if self._check_handover_conditions():
+                self.trigger_handover(reason="threshold_reached")
+        
+        # Handle handover-related instructions
+        instruction_lower = instruction.lower().strip()
+        if instruction_lower == "handover" or instruction_lower == "trigger handover":
+            self.trigger_handover(reason="user_request", manual=True)
+            return True
+        elif instruction_lower == "handover status":
+            self._show_handover_status()
+            return True
+            
+        return False
+    
+    def _show_handover_status(self):
+        """Show current handover status"""
+        if not self.enable_handover:
+            print("❌ Handover system disabled")
+            return
+        
+        session_duration = time.time() - self.session_start_time
+        threshold_progress = (self.instructions_processed / self.handover_threshold) * 100
+        
+        print(f"\n📊 Loop.py Session Status")
+        print(f"Instructions processed: {self.instructions_processed}/{self.handover_threshold} ({threshold_progress:.1f}%)")
+        print(f"Session duration: {session_duration:.1f}s")
+        print(f"Working directory: {os.getcwd()}")
+        print(f"Handover enabled: ✅")
+        
+        if self._check_handover_conditions():
+            print("🚨 Ready for handover!")
+        else:
+            print("✅ Session continuing normally")
 
 def process_yolo_instruction(instruction: str) -> list[str]:
     try:
@@ -306,9 +462,21 @@ def main(default_api_instance=None):
     parser.add_argument("--lazy", action="store_true", help="Alias for --yolo (and future relaxed behaviors)")
     parser.add_argument("--llm", help="Specify an LLM model to use (e.g., google/gemini-flash-1.5)")
     parser.add_argument("--prompt", help="Provide a prompt string to send to the LLM")
+    parser.add_argument("--handover-threshold", type=int, default=50, help="Number of instructions before considering handover (default: 50)")
+    parser.add_argument("--no-handover", action="store_true", help="Disable handover system")
     args = parser.parse_args()
 
-    agent = CodeAgent(auto_commit=True, dry_run=args.dry_run, log_file=args.log_file, default_api=default_api_instance)
+    agent = CodeAgent(
+        auto_commit=True, 
+        dry_run=args.dry_run, 
+        log_file=args.log_file, 
+        default_api=default_api_instance,
+        enable_handover=not args.no_handover
+    )
+    
+    # Configure handover threshold
+    if hasattr(agent, 'handover_threshold'):
+        agent.handover_threshold = args.handover_threshold
 
     # Example of accessing the OpenRouter API key
     openrouter_key = get_openrouter_api_key()
@@ -345,11 +513,20 @@ def main(default_api_instance=None):
 
     logging.info(f"Received instruction: {instruction}")
 
+    # Check for handover-related instructions first
+    if agent.process_instruction(instruction):
+        return  # Handover instruction was processed
+    
     if args.yolo or args.lazy:
         logging.info("YOLO mode activated. Expanding instruction...")
         expanded_instructions = process_yolo_instruction(instruction)
         for exp_instruction in expanded_instructions:
             logging.info(f"Executing expanded instruction: {exp_instruction}")
+            
+            # Check handover conditions for each expanded instruction
+            if agent.process_instruction(exp_instruction):
+                continue  # Skip to next instruction if handover was triggered
+            
             try:
                 # Attempt to parse as JSON first for LLM-generated instructions
                 parsed_json = json.loads(exp_instruction)
@@ -569,6 +746,10 @@ def main(default_api_instance=None):
         except Exception as e:
             logging.critical(f"An unexpected error occurred: {e}", exc_info=True)
             print(f"An unexpected error occurred: {e}")
+    
+    # Final handover check at end of session
+    if agent.enable_handover:
+        agent.capture_handover_state(reason="session_end", trigger="automatic")
 
 if __name__ == "__main__":
     # In the Gemini CLI environment, default_api is implicitly available.

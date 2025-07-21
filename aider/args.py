@@ -300,6 +300,33 @@ def get_parser(default_config_files, git_root):
     ).complete = shtab.FILE
 
     ##########
+    group = parser.add_argument_group("Handover settings")
+    group.add_argument(
+        "--handover-threshold",
+        type=float,
+        default=0.8,
+        help="Context usage threshold (0.0-1.0) for automatic handover (default: 0.8)",
+    )
+    group.add_argument(
+        "--auto-handover",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable/disable automatic handover triggers (default: True)",
+    )
+    group.add_argument(
+        "--handover-on-exit",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Capture handover state when session exits (default: True)",
+    )
+    group.add_argument(
+        "--restore-session",
+        metavar="HANDOVER_FILE",
+        default=None,
+        help="Restore session from handover state file (e.g., .aider.handover.state.json)",
+    ).complete = shtab.FILE
+
+    ##########
     group = parser.add_argument_group("Output settings")
     group.add_argument(
         "--dark-mode",
@@ -693,6 +720,18 @@ def get_parser(default_config_files, git_root):
         "--show-prompts",
         action="store_true",
         help="Print the system prompts and exit (debug)",
+        default=False,
+    )
+    group.add_argument(
+        "--one-shot",
+        action="store_true",
+        help="Run a single command and exit",
+        default=False,
+    )
+    group.add_argument(
+        "--silent",
+        action="store_true",
+        help="Suppress all output except for the result",
         default=False,
     )
 

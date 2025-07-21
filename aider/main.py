@@ -579,7 +579,8 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
     io = get_io(args.pretty)
     try:
-        io.rule()
+        if not args.silent:
+            io.rule()
     except UnicodeEncodeError as err:
         if not io.pretty:
             raise err
@@ -742,7 +743,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         if args.gitignore:
             check_gitignore(git_root, io)
 
-    if args.verbose:
+    if args.verbose and not args.silent:
         show = format_settings(parser, args)
         io.tool_output(show)
 
@@ -1004,6 +1005,11 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
             auto_copy_context=args.copy_paste,
             auto_accept_architect=args.auto_accept_architect,
             add_gitignore_files=args.add_gitignore_files,
+            silent=args.silent,
+            handover_threshold=args.handover_threshold,
+            auto_handover=args.auto_handover,
+            handover_on_exit=args.handover_on_exit,
+            restore_session=args.restore_session,
         )
     except UnknownEditFormat as err:
         io.tool_error(str(err))
@@ -1123,13 +1129,20 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.load:
         commands.cmd_load(args.load)
 
+    if args.silent:
+        io.silent = True
+
     if args.message:
         io.add_to_input_history(args.message)
-        io.tool_output()
+        if not args.silent:
+            io.tool_output()
         try:
             coder.run(with_message=args.message)
         except SwitchCoder:
             pass
+        if args.one_shot:
+            return
+
         analytics.event("exit", reason="Completed --message")
         return
 
@@ -1160,6 +1173,17 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         try:
             coder.ok_to_warm_cache = bool(args.cache_keepalive_pings)
             coder.run()
+            
+            # Capture handover state on session exit if enabled
+            if args.handover_on_exit and hasattr(coder, 'handover_manager'):
+                try:
+                    coder.capture_handover_state(reason="session_exit", trigger="automatic")
+                    if not args.silent:
+                        io.tool_output("Session state captured for handover")
+                except Exception as e:
+                    if not args.silent:
+                        io.tool_warning(f"Failed to capture handover state: {e}")
+            
             analytics.event("exit", reason="Completed main CLI coder.run")
             return
         except SwitchCoder as switch:
@@ -1176,7 +1200,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
             coder = Coder.create(**kwargs)
 
-            if switch.kwargs.get("show_announcements") is not False:
+            if not args.silent:
                 coder.show_announcements()
 
 

@@ -54,10 +54,12 @@ class RepoMap:
         max_context_window=None,
         map_mul_no_files=8,
         refresh="auto",
+        handover_callback=None,
     ):
         self.io = io
         self.verbose = verbose
         self.refresh = refresh
+        self.handover_callback = handover_callback
 
         if not root:
             root = os.getcwd()
@@ -601,6 +603,16 @@ class RepoMap:
         end_time = time.time()
         self.map_processing_time = end_time - start_time
 
+        # Handover hook: Check for long processing time
+        if self.handover_callback and self.map_processing_time > 30.0:  # 30 seconds
+            if self.verbose and self.io:
+                self.io.tool_output(f"Long repo map processing time: {self.map_processing_time:.1f}s")
+            try:
+                self.handover_callback("long_processing_time", "repo_map_performance")
+            except Exception as e:
+                if self.io:
+                    self.io.tool_warning(f"Handover callback failed: {e}")
+
         # Store the result in the cache
         self.map_cache[cache_key] = result
         self.last_map = result
@@ -623,6 +635,16 @@ class RepoMap:
             mentioned_fnames = set()
         if not mentioned_idents:
             mentioned_idents = set()
+
+        # Handover hook: Check for large repository operations
+        if self.handover_callback and len(other_fnames) > 1000:
+            if self.verbose and self.io:
+                self.io.tool_output(f"Large repository operation detected: {len(other_fnames)} files")
+            try:
+                self.handover_callback("large_repo_operation", "repo_map_generation")
+            except Exception as e:
+                if self.io:
+                    self.io.tool_warning(f"Handover callback failed: {e}")
 
         spin = Spinner(UPDATING_REPO_MAP_MESSAGE)
 

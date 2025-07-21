@@ -4,6 +4,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from collections import OrderedDict
 from os.path import expanduser
 from pathlib import Path
@@ -28,9 +29,10 @@ from .dump import dump  # noqa: F401
 
 
 class SwitchCoder(Exception):
-    def __init__(self, placeholder=None, **kwargs):
+    def __init__(self, placeholder=None, handover_state=None, **kwargs):
         self.kwargs = kwargs
         self.placeholder = placeholder
+        self.handover_state = handover_state
 
 
 class Commands:
@@ -109,7 +111,19 @@ class Commands:
             # If the user was using the old model's default, switch to the new model's default
             new_edit_format = model.edit_format
 
-        raise SwitchCoder(main_model=model, edit_format=new_edit_format)
+        # Capture handover state for model switch
+        handover_state = None
+        if hasattr(self.coder, 'handover_manager'):
+            try:
+                handover_state = self.coder.handover_manager.capture_current_state(
+                    coder=self.coder,
+                    reason="model_switch",
+                    trigger="user_request"
+                )
+            except Exception as e:
+                self.io.tool_error(f"Failed to capture handover state: {e}")
+        
+        raise SwitchCoder(main_model=model, edit_format=new_edit_format, handover_state=handover_state)
 
     def cmd_editor_model(self, args):
         "Switch the Editor Model to a new LLM"
@@ -121,7 +135,20 @@ class Commands:
             weak_model=self.coder.main_model.weak_model.name,
         )
         models.sanity_check_models(self.io, model)
-        raise SwitchCoder(main_model=model)
+        
+        # Capture handover state for editor model switch
+        handover_state = None
+        if hasattr(self.coder, 'handover_manager'):
+            try:
+                handover_state = self.coder.handover_manager.capture_current_state(
+                    coder=self.coder,
+                    reason="model_switch",
+                    trigger="user_request"
+                )
+            except Exception as e:
+                self.io.tool_error(f"Failed to capture handover state: {e}")
+        
+        raise SwitchCoder(main_model=model, handover_state=handover_state)
 
     def cmd_weak_model(self, args):
         "Switch the Weak Model to a new LLM"
@@ -133,7 +160,20 @@ class Commands:
             weak_model=model_name,
         )
         models.sanity_check_models(self.io, model)
-        raise SwitchCoder(main_model=model)
+        
+        # Capture handover state for weak model switch
+        handover_state = None
+        if hasattr(self.coder, 'handover_manager'):
+            try:
+                handover_state = self.coder.handover_manager.capture_current_state(
+                    coder=self.coder,
+                    reason="model_switch",
+                    trigger="user_request"
+                )
+            except Exception as e:
+                self.io.tool_error(f"Failed to capture handover state: {e}")
+        
+        raise SwitchCoder(main_model=model, handover_state=handover_state)
 
     def cmd_chat_mode(self, args):
         "Switch to a new chat mode"
@@ -197,9 +237,22 @@ class Commands:
         elif ef == "ask":
             summarize_from_coder = False
 
+        # Capture handover state for chat mode switch
+        handover_state = None
+        if hasattr(self.coder, 'handover_manager'):
+            try:
+                handover_state = self.coder.handover_manager.capture_current_state(
+                    coder=self.coder,
+                    reason="mode_switch",
+                    trigger="user_request"
+                )
+            except Exception as e:
+                self.io.tool_error(f"Failed to capture handover state: {e}")
+
         raise SwitchCoder(
             edit_format=edit_format,
             summarize_from_coder=summarize_from_coder,
+            handover_state=handover_state,
         )
 
     def completions_model(self):
@@ -441,6 +494,466 @@ class Commands:
         self._drop_all_files()
         self._clear_chat_history()
         self.io.tool_output("All files dropped and chat history cleared.")
+
+    def cmd_handover(self, args):
+        "Capture current session state and prepare for LLM handover"
+        
+        if not hasattr(self.coder, 'handover_manager'):
+            self.io.tool_error("Handover system not available")
+            return
+        
+        try:
+            # Parse arguments
+            args = args.strip()
+            reason = "manual"
+            if args:
+                reason = args
+            
+            # Check if we should include production validation
+            include_production = False
+            if args and ('production' in args.lower() or 'deploy' in args.lower()):
+                include_production = True
+            
+            # Run production validation if requested
+            production_result = None
+            if include_production:
+                try:
+                    from aider.production_validator import ProductionReadinessValidator
+                    validator = ProductionReadinessValidator(io=self.io, root_path=self.coder.root)
+                    production_result = validator.validate_project(coder=self.coder)
+                    
+                    self.io.tool_output("\n📋 Production Readiness Assessment:")
+                    self.io.tool_output(f"Overall Status: {production_result.overall_status.upper()}")
+                    self.io.tool_output(f"Readiness Score: {production_result.readiness_score:.1%}")
+                    
+                    if production_result.deployment_blockers:
+                        self.io.tool_output("🚫 Deployment Blockers:")
+                        for blocker in production_result.deployment_blockers:
+                            self.io.tool_output(f"  - {blocker}")
+                    
+                except ImportError:
+                    self.io.tool_warning("Production validation not available")
+                except Exception as e:
+                    self.io.tool_warning(f"Production validation failed: {e}")
+            
+            # Trigger handover
+            success = self.coder.perform_manual_handover(reason=reason)
+            
+            if success:
+                self.io.tool_output(f"Handover completed successfully (reason: {reason})")
+                self.io.tool_output("State saved to .aider.handover.state.json")
+                self.io.tool_output("Updated LLM_HANDOVER.md with current session context")
+                
+                # Show validation summary
+                state = self.coder.handover_manager.load_handover_state()
+                if state:
+                    validation = self.coder.handover_manager.validate_handover_readiness(state)
+                    self.io.tool_output(f"Readiness score: {validation.get('readiness_score', 0):.1%}")
+                    
+                    if validation.get('warnings'):
+                        self.io.tool_output(f"Warnings: {len(validation['warnings'])}")
+                        for warning in validation['warnings'][:3]:  # Show first 3 warnings
+                            self.io.tool_output(f"  - {warning}")
+                        if len(validation['warnings']) > 3:
+                            self.io.tool_output(f"  ... and {len(validation['warnings']) - 3} more")
+                
+                # Include production validation results in handover if available
+                if production_result:
+                    if production_result.overall_status == "ready":
+                        self.io.tool_output("🎉 Project is production-ready!")
+                    elif production_result.overall_status == "warnings":
+                        self.io.tool_output("⚠️ Project has warnings but may be deployable")
+                    else:
+                        self.io.tool_output("❌ Project has deployment blockers")
+                        
+                    # Save production report alongside handover
+                    try:
+                        from aider.production_validator import ProductionReadinessValidator
+                        validator = ProductionReadinessValidator(io=self.io)
+                        report = validator.export_results(production_result, format="markdown")
+                        with open("production_readiness_report.md", "w") as f:
+                            f.write(report)
+                        self.io.tool_output("Production report saved: production_readiness_report.md")
+                    except Exception as e:
+                        self.io.tool_warning(f"Failed to save production report: {e}")
+                        
+            else:
+                self.io.tool_error("Handover failed - check logs for details")
+                
+        except Exception as e:
+            self.io.tool_error(f"Error during handover: {e}")
+
+    def cmd_restore(self, args):
+        "Restore session from handover state"
+        
+        if not hasattr(self.coder, 'handover_manager'):
+            self.io.tool_error("Handover system not available")
+            return
+        
+        try:
+            # Parse state file argument
+            state_file = args.strip() if args.strip() else None
+            
+            # Restore from handover
+            success = self.coder.restore_from_handover(state_file=state_file)
+            
+            if success:
+                self.io.tool_output("Session restored from handover state")
+            else:
+                self.io.tool_error("Failed to restore session - check if valid handover state exists")
+                
+        except Exception as e:
+            self.io.tool_error(f"Error during restore: {e}")
+
+    def cmd_production(self, args):
+        "Validate project for production readiness"
+        
+        try:
+            from aider.production_validator import ProductionReadinessValidator
+            
+            validator = ProductionReadinessValidator(io=self.io, root_path=self.coder.root)
+            result = validator.validate_project(coder=self.coder)
+            
+            # Parse args for export options
+            args = args.strip()
+            if args:
+                if args.startswith("export"):
+                    parts = args.split()
+                    format_type = parts[1] if len(parts) > 1 else "json"
+                    
+                    if format_type in ["json", "markdown"]:
+                        output = validator.export_results(result, format_type)
+                        
+                        # Save to file
+                        filename = f"production_readiness.{format_type}"
+                        with open(filename, 'w') as f:
+                            f.write(output)
+                        
+                        self.io.tool_output(f"Production readiness report exported to {filename}")
+                    else:
+                        self.io.tool_error(f"Unsupported export format: {format_type}")
+                else:
+                    self.io.tool_error("Unknown argument. Use 'export [json|markdown]' to export results")
+            
+            # Show summary
+            if result.overall_status == "ready":
+                self.io.tool_output("🎉 Project is ready for production!")
+            elif result.overall_status == "warnings":
+                self.io.tool_output("⚠️ Project has warnings but may be deployable")
+            else:
+                self.io.tool_output("❌ Project is not ready for production")
+                
+        except ImportError:
+            self.io.tool_error("Production validation not available")
+        except Exception as e:
+            self.io.tool_error(f"Error during production validation: {e}")
+
+    def cmd_handover_status(self, args):
+        "Show comprehensive handover system status and session metrics"
+        
+        if not hasattr(self.coder, 'handover_manager'):
+            self.io.tool_error("Handover system not available")
+            return
+        
+        try:
+            # Get session metrics
+            session_duration = time.time() - self.coder.handover_manager.session_start_time
+            
+            # Check current handover readiness
+            current_tokens = self.coder._estimate_current_token_usage()
+            max_tokens = getattr(self.coder.main_model, 'max_tokens', 0)
+            
+            if max_tokens > 0:
+                usage_ratio = current_tokens / max_tokens
+            else:
+                usage_ratio = 0.0
+            
+            # Display comprehensive status
+            self.io.tool_output("\n📊 Handover System Status Dashboard")
+            self.io.tool_output("=" * 50)
+            
+            # Session Information
+            self.io.tool_output("\n🔧 Session Information:")
+            self.io.tool_output(f"  Duration: {session_duration:.1f} seconds ({session_duration/60:.1f} minutes)")
+            self.io.tool_output(f"  Working Directory: {self.coder.root}")
+            self.io.tool_output(f"  Git Branch: {self._get_current_branch()}")
+            
+            # Model Information
+            self.io.tool_output("\n🤖 Model Configuration:")
+            self.io.tool_output(f"  Main Model: {self.coder.main_model.name}")
+            self.io.tool_output(f"  Edit Format: {self.coder.edit_format}")
+            self.io.tool_output(f"  Max Tokens: {max_tokens:,}" if max_tokens > 0 else "  Max Tokens: Unknown")
+            
+            # Context Usage
+            self.io.tool_output("\n💾 Context Usage:")
+            self.io.tool_output(f"  Current Usage: {current_tokens:,} tokens ({usage_ratio:.1%})")
+            self.io.tool_output(f"  Handover Threshold: {self.coder.auto_handover_threshold:.1%}")
+            
+            if usage_ratio >= self.coder.auto_handover_threshold:
+                self.io.tool_output("  🚨 Threshold exceeded - ready for handover!")
+            else:
+                remaining = self.coder.auto_handover_threshold - usage_ratio
+                self.io.tool_output(f"  ✅ {remaining:.1%} remaining before auto-handover")
+            
+            # Session Performance
+            self.io.tool_output("\n📈 Session Performance:")
+            self.io.tool_output(f"  Context Windows Exhausted: {self.coder.num_exhausted_context_windows}")
+            self.io.tool_output(f"  Malformed Responses: {self.coder.num_malformed_responses}")
+            self.io.tool_output(f"  Total Cost: ${self.coder.total_cost:.4f}")
+            
+            # File Context
+            self.io.tool_output("\n📁 File Context:")
+            self.io.tool_output(f"  Active Files: {len(self.coder.abs_fnames)}")
+            self.io.tool_output(f"  Read-Only Files: {len(self.coder.abs_read_only_fnames)}")
+            
+            if self.coder.abs_fnames:
+                self.io.tool_output("  Active Files List:")
+                for fname in sorted(list(self.coder.abs_fnames)[:5]):  # Show first 5
+                    rel_fname = self.coder.get_rel_fname(fname)
+                    self.io.tool_output(f"    - {rel_fname}")
+                if len(self.coder.abs_fnames) > 5:
+                    self.io.tool_output(f"    ... and {len(self.coder.abs_fnames) - 5} more files")
+            
+            # Handover Configuration
+            self.io.tool_output("\n⚙️ Handover Configuration:")
+            self.io.tool_output(f"  Auto-Handover: {'✅ Enabled' if self.coder.handover_enabled else '❌ Disabled'}")
+            self.io.tool_output(f"  Handover on Exit: {'✅ Enabled' if self.coder.handover_on_exit else '❌ Disabled'}")
+            self.io.tool_output(f"  Threshold: {self.coder.auto_handover_threshold:.1%}")
+            
+            # Available Handover States
+            handover_files = self._find_handover_files()
+            if handover_files:
+                self.io.tool_output("\n💾 Available Handover States:")
+                for i, (file_path, timestamp) in enumerate(handover_files[:3]):  # Show last 3
+                    self.io.tool_output(f"  {i+1}. {file_path} (saved {timestamp})")
+                if len(handover_files) > 3:
+                    self.io.tool_output(f"     ... and {len(handover_files) - 3} more states")
+            else:
+                self.io.tool_output("\n💾 Available Handover States: None")
+            
+            # Recommendations
+            self.io.tool_output("\n💡 Recommendations:")
+            if usage_ratio >= 0.7:
+                self.io.tool_output("  ⚠️ Context usage is high - consider manual handover soon")
+            
+            if self.coder.num_exhausted_context_windows > 0:
+                self.io.tool_output("  ⚠️ Context windows have been exhausted - handover recommended")
+            
+            if not self.coder.handover_enabled:
+                self.io.tool_output("  💡 Enable auto-handover with --auto-handover flag")
+            
+            if len(self.coder.abs_fnames) > 10:
+                self.io.tool_output("  💡 Large file context - consider focusing on fewer files")
+            
+            self.io.tool_output("\n" + "=" * 50)
+            self.io.tool_output("Use /handover to manually trigger handover")
+            self.io.tool_output("Use /handover-list to see all available states")
+            
+        except Exception as e:
+            self.io.tool_error(f"Error displaying handover status: {e}")
+    
+    def _get_current_branch(self):
+        """Get current git branch name"""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["git", "branch", "--show-current"],
+                capture_output=True,
+                text=True,
+                cwd=self.coder.root
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+            return "unknown"
+        except Exception:
+            return "unknown"
+    
+    def _find_handover_files(self):
+        """Find available handover state files with timestamps"""
+        import glob
+        import os
+        from datetime import datetime
+        
+        handover_files = []
+        
+        # Look for handover state files
+        patterns = [
+            ".aider.handover.state.json",
+            ".aider.handover.state.*.json"
+        ]
+        
+        for pattern in patterns:
+            for file_path in glob.glob(pattern):
+                try:
+                    mtime = os.path.getmtime(file_path)
+                    timestamp = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                    handover_files.append((file_path, timestamp))
+                except Exception:
+                    continue
+        
+        # Sort by modification time (newest first)
+        handover_files.sort(key=lambda x: os.path.getmtime(x[0]), reverse=True)
+        
+        return handover_files
+
+    def cmd_handover_list(self, args):
+        "List all available handover states with details"
+        
+        if not hasattr(self.coder, 'handover_manager'):
+            self.io.tool_error("Handover system not available")
+            return
+        
+        try:
+            handover_files = self._find_handover_files()
+            
+            if not handover_files:
+                self.io.tool_output("No handover states found.")
+                self.io.tool_output("Use /handover to create a handover state.")
+                return
+            
+            self.io.tool_output(f"\n📋 Available Handover States ({len(handover_files)} found):")
+            self.io.tool_output("=" * 60)
+            
+            for i, (file_path, timestamp) in enumerate(handover_files, 1):
+                self.io.tool_output(f"\n{i}. {file_path}")
+                self.io.tool_output(f"   📅 Created: {timestamp}")
+                
+                # Try to read basic info from the state file
+                try:
+                    import json
+                    with open(file_path, 'r') as f:
+                        state_data = json.load(f)
+                    
+                    session_id = state_data.get('session_id', 'unknown')
+                    reason = state_data.get('handover_reason', 'unknown')
+                    trigger = state_data.get('handover_trigger', 'unknown')
+                    duration = state_data.get('session_duration', 0)
+                    
+                    self.io.tool_output(f"   🔑 Session ID: {session_id}")
+                    self.io.tool_output(f"   📝 Reason: {reason}")
+                    self.io.tool_output(f"   ⚡ Trigger: {trigger}")
+                    self.io.tool_output(f"   ⏱️  Duration: {duration:.1f}s")
+                    
+                    # Show file context if available
+                    active_files = state_data.get('active_files', [])
+                    if active_files:
+                        self.io.tool_output(f"   📁 Files: {len(active_files)} active files")
+                        
+                except Exception:
+                    self.io.tool_output(f"   ⚠️  Could not read state details")
+            
+            self.io.tool_output("\n" + "=" * 60)
+            self.io.tool_output("Use /restore <filename> to restore a specific state")
+            self.io.tool_output("Use /handover-cleanup to remove old states")
+            
+        except Exception as e:
+            self.io.tool_error(f"Error listing handover states: {e}")
+
+    def cmd_handover_cleanup(self, args):
+        "Clean up old handover state files"
+        
+        if not hasattr(self.coder, 'handover_manager'):
+            self.io.tool_error("Handover system not available")
+            return
+        
+        try:
+            # Parse arguments for cleanup options
+            keep_count = 5  # Default: keep 5 most recent
+            if args.strip():
+                try:
+                    keep_count = int(args.strip())
+                except ValueError:
+                    self.io.tool_error(f"Invalid number: {args.strip()}")
+                    return
+            
+            handover_files = self._find_handover_files()
+            
+            if len(handover_files) <= keep_count:
+                self.io.tool_output(f"No cleanup needed. Found {len(handover_files)} states, keeping {keep_count}.")
+                return
+            
+            # Files to remove (all except the most recent ones)
+            files_to_remove = handover_files[keep_count:]
+            
+            self.io.tool_output(f"🧹 Cleaning up handover states...")
+            self.io.tool_output(f"Keeping {keep_count} most recent states, removing {len(files_to_remove)} old states.")
+            
+            removed_count = 0
+            for file_path, timestamp in files_to_remove:
+                try:
+                    os.remove(file_path)
+                    self.io.tool_output(f"  ❌ Removed: {file_path} (from {timestamp})")
+                    removed_count += 1
+                except Exception as e:
+                    self.io.tool_output(f"  ⚠️  Failed to remove {file_path}: {e}")
+            
+            # Also clean up history file if it exists
+            history_file = ".aider.handover.history.jsonl"
+            if os.path.exists(history_file):
+                try:
+                    # Keep only the last 100 entries in history
+                    with open(history_file, 'r') as f:
+                        lines = f.readlines()
+                    
+                    if len(lines) > 100:
+                        with open(history_file, 'w') as f:
+                            f.writelines(lines[-100:])
+                        self.io.tool_output(f"  📝 Trimmed history file to last 100 entries")
+                except Exception as e:
+                    self.io.tool_output(f"  ⚠️  Failed to clean history file: {e}")
+            
+            self.io.tool_output(f"\n✅ Cleanup complete! Removed {removed_count} old handover states.")
+            
+        except Exception as e:
+            self.io.tool_error(f"Error during cleanup: {e}")
+
+    def cmd_handover_rename(self, args):
+        "Rename or tag a handover state file for easier identification"
+        
+        if not hasattr(self.coder, 'handover_manager'):
+            self.io.tool_error("Handover system not available")
+            return
+        
+        try:
+            # Parse arguments: <current_name> <new_name>
+            parts = args.strip().split(None, 1)
+            if len(parts) != 2:
+                self.io.tool_error("Usage: /handover-rename <current_file> <new_name>")
+                self.io.tool_output("Example: /handover-rename .aider.handover.state.json feature-complete")
+                return
+            
+            current_name, new_tag = parts
+            
+            # Validate current file exists
+            if not os.path.exists(current_name):
+                self.io.tool_error(f"File not found: {current_name}")
+                return
+            
+            # Create new filename with tag
+            if current_name == ".aider.handover.state.json":
+                new_filename = f".aider.handover.state.{new_tag}.json"
+            else:
+                # Extract timestamp if present and add tag
+                import re
+                match = re.match(r'(.+)\.json$', current_name)
+                if match:
+                    new_filename = f"{match.group(1)}.{new_tag}.json"
+                else:
+                    new_filename = f"{current_name}.{new_tag}"
+            
+            # Rename the file
+            os.rename(current_name, new_filename)
+            
+            self.io.tool_output(f"✅ Renamed handover state:")
+            self.io.tool_output(f"  From: {current_name}")
+            self.io.tool_output(f"  To:   {new_filename}")
+            
+            # Update LLM_HANDOVER.md if it was the current state
+            if current_name == ".aider.handover.state.json":
+                self.io.tool_output("💡 Note: Use /restore to load this renamed state in the future")
+            
+        except Exception as e:
+            self.io.tool_error(f"Error renaming handover state: {e}")
 
     def cmd_tokens(self, args):
         "Report on the number of tokens used by the current chat context"
