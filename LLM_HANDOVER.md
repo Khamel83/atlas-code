@@ -43,18 +43,26 @@ This document summarizes the progress and context of the current development ses
     - Never carry more than the last summary + current step context.  
     - Use `/restore` to load just those when starting a new session.
 
-> _By baking these rules into your system prompt, Claude Code will handle context compression, token monitoring, and model-tier switching automatically on every run._
+> _By baking these rules into your system prompt, Atlas Code will handle context compression, token monitoring, and model-tier switching automatically on every run._
 
 ### Model Tiering Definitions
 
 To ensure consistent understanding and routing of LLM tasks, the following model tiering system is adopted across Atlas Code:
 
-*   **Silver / Low Tier:** Suitable for repetitive, low-complexity tasks, or initial drafting where speed and cost-efficiency are paramount. Equivalent to "Flash-Lite" or similar fast, economical models.
-*   **Gold / Mid Tier:** Ideal for general drafting, code edits, and tasks requiring a balance of capability and efficiency. Equivalent to "medium-tier" models.
-*   **Platinum / Top Tier:** Reserved for planning, complex analysis, and critical code generation where high accuracy and reasoning are essential. Equivalent to "top-tier" models.
-*   **Diamond / Flagship Tier:** The highest tier, for the most demanding tasks, advanced reasoning, and flagship model capabilities.
+*   **Silver / Low Tier:** Suitable for repetitive, low-complexity tasks, or initial drafting where speed and cost-efficiency are paramount. Configured by `MODEL_TIER_EXECUTION` in `.env`.
+*   **Gold / Mid Tier:** Ideal for general drafting, code edits, and tasks requiring a balance of capability and efficiency. Configured by `MODEL_TIER_DRAFTING` in `.env`.
+*   **Platinum / Top Tier:** Reserved for planning, complex analysis, and critical code generation where high accuracy and reasoning are essential. Configured by `MODEL_TIER_PLANNING` in `.env`.
+*   **Diamond / Flagship Tier:** The highest tier, for the most demanding tasks, advanced reasoning, and flagship model capabilities. (Currently not directly configurable via `.env`, but can be used by setting `MODEL_TIER_PLANNING` to a flagship model).
 
-**Summary of Work Completed in this Session:**
+### Budget Management
+
+Atlas Code incorporates a budget management system to help control LLM API costs. Key configurations are set in the `.env` file:
+
+*   `DAILY_BUDGET`: Your daily spending limit in USD.
+*   `NOTIFY_THRESHOLDS`: Comma-separated percentages (e.g., `0.8,0.95`) at which you will be notified of your spending.
+*   `CUTOFF_TIME`: A 24-hour time (e.g., `17:00`) after which Atlas Code may automatically switch to a more cost-effective model tier if the budget is nearing its limit.
+
+## Summary of Work Completed in this Session:
 
 1.  **Systematic Handover Process Implementation:**
     *   **HandoverManager (`aider/handover_manager.py`):** Core infrastructure for capturing complete session state, including model configuration, file context, conversation history, and performance metrics.
@@ -70,17 +78,25 @@ To ensure consistent understanding and routing of LLM tasks, the following model
     *   **Validation Framework:** State integrity checking with checksums and accessibility validation.
     *   **Document Generation:** Automated LLM_HANDOVER.md generation with structured context information.
 
+4.  **Budget and Tiering System Implementation:**
+    *   **`aider/cost_estimator.py`:** Module for estimating LLM API costs.
+    *   **`aider/tier_router.py`:** Module for routing LLM calls to appropriate model tiers based on task and budget.
+    *   **`aider/budget_manager.py`:** Module for tracking daily spending, managing notifications, and enforcing budget cutoffs.
+    *   **Integration into `loop.py` and `aider/coders/base_coder.py`:** LLM calls now incorporate budget checks and tier routing.
+    *   **Integration into `aider/production_validator.py`:** Projected cost checks added to production readiness validation.
+    *   **CLI Flags:** Added `--budget`, `--notify-thresholds`, `--cutoff-time`, and `--no-auto-switch` for overriding budget settings.
+
 **Pending Tasks / Next Steps:**
 
 **High Priority:**
-*   Implement handover state JSON schema validation
-*   Add handover validation and integrity checking
-*   Add handover hooks to BaseCoderClass for automatic state capture
+*   Unit tests for new modules (`cost_estimator`, `tier_router`, `budget_manager`).
+*   Integration tests for various budget scenarios (under threshold, hit notify, exceed budget, auto-downgrade).
+*   Model-tier switching tests.
+*   Handover snapshot/restore tests.
+*   E2E tests covering full deliverable run.
 
 **Medium Priority:**
-*   Extend SwitchCoder system for comprehensive state transfer
-*   Implement command-level handover triggers
-*   Create production readiness validation framework
+*   Integrate budget checks into `repo_map` operations (deferred to last).
 
 **Instructions for the Next LLM:**
 
@@ -110,15 +126,11 @@ To ensure consistent understanding and routing of LLM tasks, the following model
 *   ✅ Command-level handover triggers implemented
 *   ✅ SwitchCoder system enhanced for state transfer
 *   ✅ JSON schema validation implemented
+*   ✅ Budget and Tiering System implemented and integrated
 
 **New Commands Available:**
 *   `/handover [reason]` - Manually trigger handover process
 *   `/restore [state_file]` - Restore session from handover state  
 *   `/production [export format]` - Validate production readiness
-
-**Systematic Handover Features:**
-*   **Automatic Triggers:** Context window exhaustion, performance degradation, malformed responses
-*   **Manual Control:** User-initiated handover with custom reasons
-*   **State Validation:** JSON schema validation with integrity checking
-*   **Production Support:** Comprehensive deployment readiness validation
-*   **Seamless Integration:** Hooks in all major coder lifecycle methods
+*   `/budget-status` - Display current budget usage and status
+*   `/budget-approve` - Approve a budget increase if prompted

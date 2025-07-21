@@ -226,6 +226,34 @@ def get_parser(default_config_files, git_root):
             " If unspecified, defaults to the model's max_chat_history_tokens."
         ),
     )
+    group.add_argument(
+        "--no-auto-switch",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Disable automatic model tier switching based on budget (default: False)",
+    )
+
+    ##########
+    group = parser.add_argument_group("Budget settings")
+    group.add_argument(
+        "--budget",
+        type=float,
+        default=None,
+        help="Set the daily budget for LLM usage in USD (default: None, no budget limit)",
+    )
+    group.add_argument(
+        "--notify-thresholds",
+        type=float,
+        nargs="+",
+        default=None,
+        help="Set budget notification thresholds as percentages (e.g., 0.5 0.8 for 50%% and 80%%)",
+    )
+    group.add_argument(
+        "--cutoff-time",
+        type=str,
+        default=None,
+        help="Set the daily budget cutoff time (e.g., '00:00' for midnight UTC)",
+    )
 
     ##########
     group = parser.add_argument_group("Cache settings")

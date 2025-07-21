@@ -2,22 +2,22 @@
 **[LLM Handover Document](LLM_HANDOVER.md)**
 
 <p align="center">
-    <a href="https://aider.chat/"><img src="https://aider.chat/assets/logo.svg" alt="Aider Logo" width="300"></a>
+    <a href="https://aider.chat/"><img src="https://aider.chat/assets/logo.svg" alt="Atlas Code Logo" width="300"></a>
 </p>
 
 <h1 align="center">
-AI Pair Programming in Your Terminal
+Atlas Code: Budget-Aware AI Pair Programming in Your Terminal
 </h1>
 
 
 <p align="center">
-Aider lets you pair program with LLMs to start a new project or build on your existing codebase. 
+Atlas Code lets you pair program with LLMs to start a new project or build on your existing codebase, with a focus on cost optimization.
 </p>
 
 <p align="center">
   <img
     src="https://aider.chat/assets/screencast.svg"
-    alt="aider screencast"
+    alt="Atlas Code screencast"
   >
 </p>
 
@@ -45,35 +45,42 @@ src="https://img.shields.io/badge/🔄%20Singularity-21%25-e74c3c?style=flat-squ
 ### [Cloud and local LLMs](https://aider.chat/docs/llms.html)
 
 <a href="https://aider.chat/docs/llms.html"><img src="https://aider.chat/assets/icons/brain.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Aider works best with Claude 3.7 Sonnet, DeepSeek R1 & Chat V3, OpenAI o1, o3-mini & GPT-4o, but can connect to almost any LLM, including local models.
+Atlas Code works best with Claude 3.7 Sonnet, DeepSeek R1 & Chat V3, OpenAI o1, o3-mini & GPT-4o, but can connect to almost any LLM, including local models.
+
+<br>
+
+### Budget Management & Tiered Models
+
+<img src="https://aider.chat/assets/icons/currency-usd.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px">
+Atlas Code helps you manage your LLM spending with daily budget limits, notification thresholds, and automatic model tier switching. Configure your budget and model tiers in the `.env` file.
 
 <br>
 
 ### [Maps your codebase](https://aider.chat/docs/repomap.html)
 
 <a href="https://aider.chat/docs/repomap.html"><img src="https://aider.chat/assets/icons/map-outline.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Aider makes a map of your entire codebase, which helps it work well in larger projects.
+Atlas Code makes a map of your entire codebase, which helps it work well in larger projects.
 
 <br>
 
 ### [100+ code languages](https://aider.chat/docs/languages.html)
 
 <a href="https://aider.chat/docs/languages.html"><img src="https://aider.chat/assets/icons/code-tags.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Aider works with most popular programming languages: python, javascript, rust, ruby, go, cpp, php, html, css, and dozens more.
+Atlas Code works with most popular programming languages: python, javascript, rust, ruby, go, cpp, php, html, css, and dozens more.
 
 <br>
 
 ### [Git integration](https://aider.chat/docs/git.html)
 
 <a href="https://aider.chat/docs/git.html"><img src="https://aider.chat/assets/icons/source-branch.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Aider automatically commits changes with sensible commit messages. Use familiar git tools to easily diff, manage and undo AI changes.
+Atlas Code automatically commits changes with sensible commit messages. Use familiar git tools to easily diff, manage and undo AI changes.
 
 <br>
 
 ### [Use in your IDE](https://aider.chat/docs/usage/watch.html)
 
 <a href="https://aider.chat/docs/usage/watch.html"><img src="https://aider.chat/assets/icons/monitor.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Use aider from within your favorite IDE or editor. Ask for changes by adding comments to your code and aider will get to work.
+Use Atlas Code from within your favorite IDE or editor. Ask for changes by adding comments to your code and Atlas Code will get to work.
 
 <br>
 
@@ -87,21 +94,21 @@ Add images and web pages to the chat to provide visual context, screenshots, ref
 ### [Voice-to-code](https://aider.chat/docs/usage/voice.html)
 
 <a href="https://aider.chat/docs/usage/voice.html"><img src="https://aider.chat/assets/icons/microphone.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Speak with aider about your code! Request new features, test cases or bug fixes using your voice and let aider implement the changes.
+Speak with Atlas Code about your code! Request new features, test cases or bug fixes using your voice and let Atlas Code implement the changes.
 
 <br>
 
 ### [Linting & testing](https://aider.chat/docs/usage/lint-test.html)
 
 <a href="https://aider.chat/docs/usage/lint-test.html"><img src="https://aider.chat/assets/icons/check-all.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Automatically lint and test your code every time aider makes changes. Aider can fix problems detected by your linters and test suites.
+Automatically lint and test your code every time Atlas Code makes changes. Atlas Code can fix problems detected by your linters and test suites.
 
 <br>
 
 ### [Copy/paste to web chat](https://aider.chat/docs/usage/copypaste.html)
 
 <a href="https://aider.chat/docs/usage/copypaste.html"><img src="https://aider.chat/assets/icons/content-copy.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
-Work with any LLM via its web chat interface. Aider streamlines copy/pasting code context and edits back and forth with a browser.
+Work with any LLM via its web chat interface. Atlas Code streamlines copy/pasting code context and edits back and forth with a browser.
 
 ## Getting Started
 
@@ -112,14 +119,23 @@ aider-install
 # Change directory into your codebase
 cd /to/your/project
 
-# DeepSeek
-aider --model deepseek --api-key deepseek=<key>
+# Configure your API key and budget settings
+# Copy .env.example to .env and fill in your OpenRouter API key
+# Adjust DAILY_BUDGET, NOTIFY_THRESHOLDS, and CUTOFF_TIME as needed.
+cp .env.example .env
 
-# Claude 3.7 Sonnet
-aider --model sonnet --api-key anthropic=<key>
+# Start Atlas Code with your preferred model
+# Example: Using a DeepSeek model with your OpenRouter API key
+atlas-code --model deepseek/deepseek-chat-v3-0324 --api-key openrouter=<your_openrouter_api_key>
 
-# o3-mini
-aider --model o3-mini --api-key openai=<key>
+# You can also override budget settings directly via CLI flags:
+# atlas-code --budget 5.00 --notify-thresholds 0.6 0.9 --cutoff-time 20:00
+
+# Check your current budget status
+/budget-status
+
+# Approve a budget increase if prompted
+/budget-approve
 ```
 
 See the [installation instructions](https://aider.chat/docs/install.html) and [usage documentation](https://aider.chat/docs/usage.html) for more details.
@@ -138,46 +154,45 @@ See the [installation instructions](https://aider.chat/docs/install.html) and [u
 ### Community & Resources
 - [LLM Leaderboards](https://aider.chat/docs/leaderboards/)
 - [GitHub Repository](https://github.com/Aider-AI/aider)
-- [Discord Community](https://discord.gg/Y7X7bhMQFV)
+- [Discord Community](https://discord.com/channels/1131200896827654144/1131200896827654149)
 - [Release notes](https://aider.chat/HISTORY.html)
 - [Blog](https://aider.chat/blog/)
 
 ## Kind Words From Users
 
-- *"My life has changed... Aider... It's going to rock your world."* — [Eric S. Raymond on X](https://x.com/esrtweet/status/1910809356381413593)
+- *"My life has changed... Atlas Code... It's going to rock your world."* — [Eric S. Raymond on X](https://x.com/esrtweet/status/1910809356381413593)
 - *"The best free open source AI coding assistant."* — [IndyDevDan on YouTube](https://youtu.be/YALpX8oOn78)
 - *"The best AI coding assistant so far."* — [Matthew Berman on YouTube](https://www.youtube.com/watch?v=df8afeb1FY8)
-- *"Aider ... has easily quadrupled my coding productivity."* — [SOLAR_FIELDS on Hacker News](https://news.ycombinator.com/item?id=36212100)
-- *"It's a cool workflow... Aider's ergonomics are perfect for me."* — [qup on Hacker News](https://news.ycombinator.com/item?id=38185326)
+- *"Atlas Code ... has easily quadrupled my coding productivity."* — [SOLAR_FIELDS on Hacker News](https://news.ycombinator.com/item?id=36212100)
+- *"It's a cool workflow... Atlas Code's ergonomics are perfect for me."* — [qup on Hacker News](https://news.ycombinator.com/item?id=38185326)
 - *"It's really like having your senior developer live right in your Git repo - truly amazing!"* — [rappster on GitHub](https://github.com/Aider-AI/aider/issues/124)
 - *"What an amazing tool. It's incredible."* — [valyagolev on GitHub](https://github.com/Aider-AI/aider/issues/6#issue-1722897858)
-- *"Aider is such an astounding thing!"* — [cgrothaus on GitHub](https://github.com/Aider-AI/aider/issues/82#issuecomment-1631876700)
+- *"Atlas Code is such an astounding thing!"* — [cgrothaus on GitHub](https://github.com/Aider-AI/aider/issues/82#issuecomment-1631876700)
 - *"It was WAY faster than I would be getting off the ground and making the first few working versions."* — [Daniel Feldman on X](https://twitter.com/d_feldman/status/1662295077387923456)
-- *"THANK YOU for Aider! It really feels like a glimpse into the future of coding."* — [derwiki on Hacker News](https://news.ycombinator.com/item?id=38205643)
+- *"THANK YOU for Atlas Code! It really feels like a glimpse into the future of coding."* — [derwiki on Hacker News](https://news.ycombinator.com/item?id=38205643)
 - *"It's just amazing. It is freeing me to do things I felt were out my comfort zone before."* — [Dougie on Discord](https://discord.com/channels/1131200896827654144/1174002618058678323/1174084556257775656)
 - *"This project is stellar."* — [funkytaco on GitHub](https://github.com/Aider-AI/aider/issues/112#issuecomment-1637429008)
 - *"Amazing project, definitely the best AI coding assistant I've used."* — [joshuavial on GitHub](https://github.com/Aider-AI/aider/issues/84)
-- *"I absolutely love using Aider ... It makes software development feel so much lighter as an experience."* — [principalideal0 on Discord](https://discord.com/channels/1131200896827654144/1133421607499595858/1229689636012691468)
-- *"I have been recovering from ... surgeries ... aider ... has allowed me to continue productivity."* — [codeninja on Reddit](https://www.reddit.com/r/OpenAI/s/nmNwkHy1zG)
-- *"I am an aider addict. I'm getting so much more work done, but in less time."* — [dandandan on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1135913253483069470)
-- *"Aider... blows everything else out of the water hands down, there's no competition whatsoever."* — [SystemSculpt on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1178736602797846548)
-- *"Aider is amazing, coupled with Sonnet 3.5 it's quite mind blowing."* — [Josh Dingus on Discord](https://discord.com/channels/1131200896827654144/1133060684540813372/1262374225298198548)
+- *"I absolutely love using Atlas Code ... It makes software development feel so much lighter as an experience."* — [principalideal0 on Discord](https://discord.com/channels/1131200896827654144/1133421607499595858/1229689636012691468)
+- *"I have been recovering from ... surgeries ... Atlas Code ... has allowed me to continue productivity."* — [codeninja on Reddit](https://www.reddit.com/r/OpenAI/s/nmNwkHy1zG)
+- *"I am an Atlas Code addict. I'm getting so much more work done, but in less time."* — [dandandan on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1135913253483069470)
+- *"Atlas Code... blows everything else out of the water hands down, there's no competition whatsoever."* — [SystemSculpt on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1178736602797846548)
+- *"Atlas Code is amazing, coupled with Sonnet 3.5 it's quite mind blowing."* — [Josh Dingus on Discord](https://discord.com/channels/1131200896827654144/1133060684540813372/1262374225298198548)
 - *"Hands down, this is the best AI coding assistant tool so far."* — [IndyDevDan on YouTube](https://www.youtube.com/watch?v=MPYFPvxfGZs)
-- *"[Aider] changed my daily coding workflows. It's mind-blowing how ...(it)... can change your life."* — [maledorak on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1258453375620747264)
+- *"[Atlas Code] changed my daily coding workflows. It's mind-blowing how ...(it)... can change your life."* — [maledorak on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1258453375620747264)
 - *"Best agent for actual dev work in existing codebases."* — [Nick Dobos on X](https://twitter.com/NickADobos/status/1690408967963652097?s=20)
 - *"One of my favorite pieces of software. Blazing trails on new paradigms!"* — [Chris Wall on X](https://x.com/chris65536/status/1905053299251798432)
-- *"Aider has been revolutionary for me and my work."* — [Starry Hope on X](https://x.com/starryhopeblog/status/1904985812137132056)
-- *"Try aider! One of the best ways to vibe code."* — [Chris Wall on X](https://x.com/Chris65536/status/1905053418961391929)
-- *"Freaking love Aider."* — [hztar on Hacker News](https://news.ycombinator.com/item?id=44035015)
-- *"Aider is hands down the best. And it's free and opensource."* — [AriyaSavakaLurker on Reddit](https://www.reddit.com/r/ChatGPTCoding/comments/1ik16y6/whats_your_take_on_aider/mbip39n/)
-- *"Aider is also my best friend."* — [jzn21 on Reddit](https://www.reddit.com/r/ChatGPTCoding/comments/1heuvuo/aider_vs_cline_vs_windsurf_vs_cursor/m27dcnb/)
-- *"Try Aider, it's worth it."* — [jorgejhms on Reddit](https://www.reddit.com/r/ChatGPTCoding/comments/1heuvuo/aider_vs_cline_vs_windsurf_vs_cursor/m27cp99/)
-- *"I like aider :)"* — [Chenwei Cui on X](https://x.com/ccui42/status/1904965344999145698)
-- *"Aider is the precision tool of LLM code gen... Minimal, thoughtful and capable of surgical changes ... while keeping the developer in control."* — [Reilly Sweetland on X](https://x.com/rsweetland/status/1904963807237259586)
-- *"Cannot believe aider vibe coded a 650 LOC feature across service and cli today in 1 shot."* - [autopoietist on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1355675042259796101)
-- *"Oh no the secret is out! Yes, Aider is the best coding tool around. I highly, highly recommend it to anyone."* — [Joshua D Vander Hook on X](https://x.com/jodavaho/status/1911154899057795218)
-- *"thanks to aider, i have started and finished three personal projects within the last two days"* — [joseph stalzyn on X](https://x.com/anitaheeder/status/1908338609645904160)
-- *"Been using aider as my daily driver for over a year ... I absolutely love the tool, like beyond words."* — [koleok on Discord](https://discord.com/channels/1131200896827654144/1273248471394291754/1356727448372252783)
-- *"Aider ... is the tool to benchmark against."* — [BeetleB on Hacker News](https://news.ycombinator.com/item?id=43930201)
-- *"aider is really cool"* — [kache on X](https://x.com/yacineMTB/status/1911224442430124387)
-
+- *"Atlas Code has been revolutionary for me and my work."* — [Starry Hope on X](https://x.com/starryhopeblog/status/1904985812137132056)
+- *"Try Atlas Code! One of the best ways to vibe code."* — [Chris Wall on X](https://x.com/Chris65536/status/1905053418961391929)
+- *"Freaking love Atlas Code."* — [hztar on Hacker News](https://news.ycombinator.com/item?id=44035015)
+- *"Atlas Code is hands down the best. And it's free and opensource."* — [AriyaSavakaLurker on Reddit](https://www.reddit.com/r/ChatGPTCoding/comments/1ik16y6/whats_your_take_on_aider/mbip39n/)
+- *"Atlas Code is also my best friend."* — [jzn21 on Reddit](https://www.reddit.com/r/ChatGPTCoding/comments/1heuvuo/aider_vs_cline_vs_windsurf_vs_cursor/m27dcnb/)
+- *"Try Atlas Code, it's worth it."* — [jorgejhms on Reddit](https://www.reddit.com/r/ChatGPTCoding/comments/1heuvuo/aider_vs_cline_vs_windsurf_vs_cursor/m27cp99/)
+- *"I like Atlas Code :)"* — [Chenwei Cui on X](https://x.com/ccui42/status/1904965344999145698)
+- *"Atlas Code is the precision tool of LLM code gen... Minimal, thoughtful and capable of surgical changes ... while keeping the developer in control."* — [Reilly Sweetland on X](https://x.com/rsweetland/status/1904963807237259586)
+- *"Cannot believe Atlas Code vibe coded a 650 LOC feature across service and cli today in 1 shot."* - [autopoietist on Discord](https://discord.com/channels/1131200896827654144/1131200896827654149/1355675042259796101)
+- *"Oh no the secret is out! Yes, Atlas Code is the best coding tool around. I highly, highly recommend it to anyone."* — [Joshua D Vander Hook on X](https://x.com/jodavaho/status/1911154899057795218)
+- *"thanks to Atlas Code, i have started and finished three personal projects within the last two days"* — [joseph stalzyn on X](https://x.com/anitaheeder/status/1908338609645904160)
+- *"Been using Atlas Code as my daily driver for over a year ... I absolutely love the tool, like beyond words."* — [koleok on Discord](https://discord.com/channels/1131200896827654144/1273248471394291754/1356727448372252783)
+- *"Atlas Code ... is the tool to benchmark against."* — [BeetleB on Hacker News](https://news.ycombinator.com/item?id=43930201)
+- *"Atlas Code is really cool"* — [kache on X](https://x.com/yacineMTB/status/1911224442430124387)

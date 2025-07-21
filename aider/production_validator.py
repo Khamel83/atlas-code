@@ -33,10 +33,12 @@ class ProductionValidationResult:
 class ProductionReadinessValidator:
     """Validates code and project for production deployment"""
     
-    def __init__(self, io=None, root_path=None):
+    def __init__(self, io=None, root_path=None, budget_manager=None, cost_estimator=None):
         self.io = io
         self.root_path = root_path or os.getcwd()
         self.checks = []
+        self.budget_manager = budget_manager
+        self.cost_estimator = cost_estimator
         
     def validate_project(self, coder=None) -> ProductionValidationResult:
         """Perform comprehensive production readiness validation"""
@@ -52,6 +54,7 @@ class ProductionReadinessValidator:
         self._check_documentation()
         self._check_configuration()
         self._check_deployment_readiness()
+        self._check_projected_cost() # New budget check
         
         # Calculate overall results
         result = self._calculate_results()
@@ -61,6 +64,62 @@ class ProductionReadinessValidator:
         
         return result
     
+    def _check_projected_cost(self):
+        """Check projected cost against daily budget."""
+        if not self.budget_manager or not self.cost_estimator:
+            self.checks.append(ProductionCheck(
+                name="Budget Integration",
+                status="skip",
+                message="Budget manager or cost estimator not provided.",
+                fix_suggestion="Initialize ProductionReadinessValidator with budget_manager and cost_estimator."
+            ))
+            return
+
+        # Hypothetical large operation: e.g., a large code generation task
+        # Assuming a model and token count for a significant operation
+        # This is a placeholder, actual estimation might be more complex
+        hypothetical_model = "gpt-4o" # Example model
+        hypothetical_input_tokens = 100000
+        hypothetical_output_tokens = 50000
+
+        try:
+            projected_cost = self.cost_estimator.estimate_cost(
+                hypothetical_model,
+                hypothetical_input_tokens,
+                hypothetical_output_tokens
+            )
+            
+            if self.budget_manager.should_cutoff(projected_cost):
+                self.checks.append(ProductionCheck(
+                    name="Projected LLM Cost",
+                    status="fail",
+                    message=f"Projected cost (${projected_cost:.2f}) for large LLM operation exceeds daily budget.",
+                    details={"projected_cost": projected_cost, "daily_budget": self.budget_manager.daily_budget},
+                    fix_suggestion="Increase daily budget or optimize LLM usage for large operations."
+                ))
+            elif self.budget_manager.should_notify(projected_cost):
+                self.checks.append(ProductionCheck(
+                    name="Projected LLM Cost",
+                    status="warning",
+                    message=f"Projected cost (${projected_cost:.2f}) for large LLM operation is close to daily budget.",
+                    details={"projected_cost": projected_cost, "daily_budget": self.budget_manager.daily_budget},
+                    fix_suggestion="Monitor LLM usage closely or consider increasing daily budget."
+                ))
+            else:
+                self.checks.append(ProductionCheck(
+                    name="Projected LLM Cost",
+                    status="pass",
+                    message=f"Projected cost (${projected_cost:.2f}) for large LLM operation is within budget.",
+                    details={"projected_cost": projected_cost, "daily_budget": self.budget_manager.daily_budget}
+                ))
+        except Exception as e:
+            self.checks.append(ProductionCheck(
+                name="Projected LLM Cost",
+                status="error",
+                message=f"Error estimating projected cost: {e}",
+                fix_suggestion="Ensure cost estimator is correctly configured and models are valid."
+            ))
+
     def _check_git_status(self):
         """Check git repository status"""
         
