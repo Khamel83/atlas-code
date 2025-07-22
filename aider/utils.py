@@ -7,8 +7,8 @@ from pathlib import Path
 
 import oslex
 
-from atlas_code.dump import dump  # noqa: F401
-from atlas_code.waiting import Spinner
+from aider.dump import dump  # noqa: F401
+from aider.waiting import Spinner
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp", ".pdf"}
 

@@ -69,7 +69,7 @@ HANDOVER_STATE_SCHEMA = {
                     "description": "Additional model metadata"
                 }
             },
-            "additionalProperties": true
+            "additionalProperties": True
         },
         "editor_model": {
             "anyOf": [
@@ -81,7 +81,7 @@ HANDOVER_STATE_SCHEMA = {
                         "name": {"type": "string"},
                         "max_tokens": {"type": "integer", "minimum": 0}
                     },
-                    "additionalProperties": true
+                    "additionalProperties": True
                 }
             ],
             "description": "Editor model configuration or null"
@@ -96,7 +96,7 @@ HANDOVER_STATE_SCHEMA = {
                         "name": {"type": "string"},
                         "max_tokens": {"type": "integer", "minimum": 0}
                     },
-                    "additionalProperties": true
+                    "additionalProperties": True
                 }
             ],
             "description": "Weak model configuration or null"
@@ -111,7 +111,7 @@ HANDOVER_STATE_SCHEMA = {
                 "type": "string",
                 "description": "Absolute path to active file"
             },
-            "uniqueItems": true,
+            "uniqueItems": True,
             "description": "List of currently active files in session"
         },
         "read_only_files": {
@@ -120,7 +120,7 @@ HANDOVER_STATE_SCHEMA = {
                 "type": "string", 
                 "description": "Absolute path to read-only file"
             },
-            "uniqueItems": true,
+            "uniqueItems": True,
             "description": "List of read-only files in session"
         },
         "repository_map": {
@@ -146,7 +146,7 @@ HANDOVER_STATE_SCHEMA = {
                     "description": "List of staged files"
                 }
             },
-            "additionalProperties": true,
+            "additionalProperties": True,
             "description": "Current git repository status"
         },
         "chat_history_summary": {
@@ -167,7 +167,7 @@ HANDOVER_STATE_SCHEMA = {
                     "description": "Number of times context window was exhausted"
                 }
             },
-            "additionalProperties": true,
+            "additionalProperties": True,
             "description": "Conversation context and statistics"
         },
         "user_preferences": {
@@ -181,7 +181,7 @@ HANDOVER_STATE_SCHEMA = {
                     "type": "string"
                 }
             },
-            "additionalProperties": false,
+            "additionalProperties": False,
             "description": "Safe environment variables (no secrets)"
         },
         "current_coder_type": {
@@ -237,7 +237,7 @@ HANDOVER_STATE_SCHEMA = {
                         "description": "Operation creation timestamp"
                     }
                 },
-                "additionalProperties": true
+                "additionalProperties": True
             },
             "description": "List of pending operations to complete"
         },
@@ -266,7 +266,7 @@ HANDOVER_STATE_SCHEMA = {
                     "minimum": 0
                 }
             },
-            "additionalProperties": true,
+            "additionalProperties": True,
             "description": "Token usage statistics"
         },
         "success_metrics": {
@@ -286,7 +286,7 @@ HANDOVER_STATE_SCHEMA = {
                     "maximum": 1
                 }
             },
-            "additionalProperties": true,
+            "additionalProperties": True,
             "description": "Session success metrics"
         },
         "handover_reason": {
@@ -326,7 +326,7 @@ HANDOVER_STATE_SCHEMA = {
             "description": "16-character hex validation checksum"
         }
     },
-    "additionalProperties": false
+    "additionalProperties": False
 }
 
 

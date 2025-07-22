@@ -201,6 +201,9 @@ class Coder:
                 handover_enabled=from_coder.handover_enabled,
                 auto_handover_threshold=from_coder.auto_handover_threshold,
                 handover_on_exit=from_coder.handover_on_exit,
+                budget_manager=from_coder.budget_manager,
+                cost_estimator=from_coder.cost_estimator,
+                tier_router=from_coder.tier_router,
             )
             use_kwargs.update(update)  # override to complete the switch
             use_kwargs.update(kwargs)  # override passed kwargs
@@ -375,6 +378,9 @@ class Coder:
         chat_completion_response_hashes=None,
         need_commit_before_edits=None,
         handover_manager=None,
+        budget_manager=None, # New parameter
+        cost_estimator=None, # New parameter
+        tier_router=None, # New parameter
     ):
         # Fill in a dummy Analytics if needed, but it is never .enable()'d
         self.analytics = analytics if analytics is not None else Analytics()
@@ -592,6 +598,11 @@ class Coder:
         self.chat_completion_call_hashes = chat_completion_call_hashes
         self.chat_completion_response_hashes = chat_completion_response_hashes
         self.need_commit_before_edits = need_commit_before_edits
+        
+        # Initialize budget management components
+        self.budget_manager = budget_manager
+        self.cost_estimator = cost_estimator  
+        self.tier_router = tier_router
 
     def _capture_handover_state(self, trigger_reason: str, trigger_type: str = "automated"):
         """Capture and save the current session state for handover."""
