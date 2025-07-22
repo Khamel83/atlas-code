@@ -5,7 +5,7 @@ from pathlib import Path
 
 import packaging.version
 
-import atlas_code
+from aider import __version__ as atlas_code_version
 from aider import utils
 from aider.dump import dump  # noqa: F401
 
@@ -78,7 +78,7 @@ def check_version(io, just_check=False, verbose=False):
         response = requests.get("https://pypi.org/pypi/atlas-code/json")
         data = response.json()
         latest_version = data["info"]["version"]
-        current_version = atlas_code.__version__
+        current_version = atlas_code_version
 
         if just_check or verbose:
             io.tool_output(f"Current version: {current_version}")
