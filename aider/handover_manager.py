@@ -529,8 +529,9 @@ Based on the current session state and handover reason, the following actions ar
         # Capture environment variables (non-sensitive)
         safe_env_vars = {}
         for key, value in os.environ.items():
-            if not any(sensitive in key.lower() for sensitive in ['key', 'secret', 'token', 'password']):
-                safe_env_vars[key] = value
+            if key.isupper() and key.replace('_', '').isalnum():
+                if not any(sensitive in key.lower() for sensitive in ['key', 'secret', 'token', 'password']):
+                    safe_env_vars[key] = value
         context["env_vars"] = safe_env_vars
         
         return context

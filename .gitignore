@@ -19,3 +19,4 @@ atlas-env/
 tmp.benchmarks/
 .docker_bash_history
 .env
+.atlas_code*

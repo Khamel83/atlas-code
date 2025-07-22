@@ -324,6 +324,13 @@ HANDOVER_STATE_SCHEMA = {
             "type": "string",
             "pattern": "^[a-f0-9]{16}$",
             "description": "16-character hex validation checksum"
+        },
+        "file_hashes": {
+            "type": "object",
+            "description": "Dictionary of file paths to SHA256 hashes",
+            "additionalProperties": {
+                "type": "string"
+            }
         }
     },
     "additionalProperties": False
