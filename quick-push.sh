@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Quick Push Script for Atlas Code Development
-# Provides continuous integration workflow
+# Provides continuous integration workflow with 5-minute intervals
 
 echo "🚀 Atlas Code Quick Push..."
 

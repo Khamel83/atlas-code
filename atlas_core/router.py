@@ -136,10 +136,11 @@ class ModelRouter:
             r'\b(function|method|class|variable)\b'
         ],
         ModelTier.SILVER: [
+            r'\b(fix.*typo|typo|spelling|syntax\s+error)\b',
             r'\b(comment|document|explain|clarify)\b',
-            r'\b(simple|basic|quick|small)\b',
-            r'\b(typo|syntax|formatting|style)\b',
-            r'\b(help|question|what|how|why)\b'
+            r'\b(simple|basic|quick|small)\b.*\b(script|function|example)\b',
+            r'\b(hello\s+world|print|echo)\b',
+            r'\b(help|question|what\s+is|how\s+to|why)\b'
         ]
     }
     
@@ -179,8 +180,16 @@ class ModelRouter:
         if any(word in prompt_lower for word in ['silver', 'cheap', 'budget', 'simple']):
             return ModelTier.SILVER
             
-        # Pattern-based classification
-        for tier in [ModelTier.DIAMOND, ModelTier.PLATINUM, ModelTier.GOLD, ModelTier.SILVER]:
+        # Pattern-based classification - check SILVER first for specific simple tasks
+        # Check SILVER tier first (most specific patterns)
+        silver_patterns = self.TASK_PATTERNS.get(ModelTier.SILVER, [])
+        for pattern in silver_patterns:
+            if re.search(pattern, prompt_lower):
+                logger.info(f"Task classified as SILVER based on pattern: {pattern}")
+                return ModelTier.SILVER
+        
+        # Then check higher tiers in order
+        for tier in [ModelTier.DIAMOND, ModelTier.PLATINUM, ModelTier.GOLD]:
             patterns = self.TASK_PATTERNS.get(tier, [])
             for pattern in patterns:
                 if re.search(pattern, prompt_lower):

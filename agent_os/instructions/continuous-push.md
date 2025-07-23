@@ -9,7 +9,7 @@ git status
 git pull origin main  # or current branch
 ```
 
-### 2. During Development (Every 30 minutes)
+### 2. During Development (Every 5 minutes)
 ```bash
 git add -A
 git commit -m "feat: describe what you just implemented"
@@ -38,9 +38,10 @@ echo "✅ Changes pushed to GitHub"
 ```
 
 ### IDE Integration
-- Set up auto-save every 5 minutes
+- Set up auto-save every 2 minutes
 - Configure git hooks for automatic staging
 - Use IDE extensions for git status visibility
+- Consider git auto-push extensions for 5-minute intervals
 
 ## Emergency Backup
 If system crashes or unexpected issues:
