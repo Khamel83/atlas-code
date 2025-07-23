@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timedelta
 
 class BudgetOptimizer:
-    def __init__(self, usage_log_path="data/usage_log.jsonl", daily_limit=None):
+    def __init__(self, usage_log_path="data/ralex_usage_log.jsonl", daily_limit=None):
         self.usage_log_path = usage_log_path
         self.daily_limit = daily_limit
         os.makedirs(os.path.dirname(self.usage_log_path), exist_ok=True)
