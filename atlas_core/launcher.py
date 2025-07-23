@@ -72,7 +72,7 @@ def main():
     semantic_classifier = SemanticClassifier()
 
     # --- Initialize Budget Optimizer ---
-    budget_optimizer = BudgetOptimizer()
+    budget_optimizer = BudgetOptimizer(daily_limit=settings.get("daily_limit"))
 
     # --- File Context (In-memory store) ---
     file_context = {}
@@ -146,6 +146,18 @@ def main():
 
             # --- Pre-execution Dry Run and Confirmation (Task 2.1.1 & 2.1.2) ---
             print(f"\nProposed Action: Intent '{intent}' using model '{selected_model}' (tier: {tier})")
+            
+            # --- Budget Check (Task 5.2.3 & 5.2.4) ---
+            budget_status = budget_optimizer.check_budget_status()
+            if budget_status["status"] == "warning":
+                print(f"\n⚠️  Budget Warning: You have spent ${budget_status["spent_today"]:.2f} today out of your ${budget_status["daily_limit"]:.2f} daily limit ({budget_status["percentage_used"]:.2f}% used).")
+            elif budget_status["status"] == "exceeded":
+                print(f"\n🚨 Budget Exceeded: You have spent ${budget_status["spent_today"]:.2f} today out of your ${budget_status["daily_limit"]:.2f} daily limit ({budget_status["percentage_used"]:.2f}% used).")
+                confirm = input("You have exceeded your daily budget. Proceed anyway? [y/N] ").lower()
+                if confirm != 'y':
+                    print("Action cancelled due to budget.")
+                    continue
+
             confirm = input("Proceed with this action? [Y/n] ").lower()
             if confirm == 'n':
                 print("Action cancelled.")
