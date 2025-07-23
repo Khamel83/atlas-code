@@ -1,4 +1,4 @@
-# Atlas Code V2 - Raspberry Pi Quick Start 🍓
+# Ralex V2 transforms AI-assisted coding from a manual, anxiety-inducing process into an automated, cost-effective, and reliable development workflow.
 
 **AI Pair Programming on Raspberry Pi with Smart Model Routing**
 
