@@ -1481,7 +1481,7 @@ versions.
 * Improved ability to correct when gpt-4 omits leading whitespace in code edits
 * Added `--openai-api-base` to support API proxies, etc.
 
-### Aider v0.5.0
+### Ralex v0.5.0
 
 - Added support for `gpt-3.5-turbo` and `gpt-4-32k`.
 - Added `--map-tokens` to set a token budget for the repo map, along with a PageRank based algorithm for prioritizing which files and identifiers to include in the map.
