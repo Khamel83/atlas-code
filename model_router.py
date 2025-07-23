@@ -96,7 +96,7 @@ class IntelligentModelRouter:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://github.com/Khamel83/atlas-code",
-            "X-Title": "Atlas Code V2"
+            "X-Title": "Ralex V2"
         }
         
         data = {
