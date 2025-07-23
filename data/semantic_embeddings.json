@@ -1,0 +1,200 @@
+{
+  "default_semantic_cache": {
+    "code_generation": {
+      "examples": [
+        {
+          "text": "write a python function to calculate fibonacci",
+          "embedding": [0.2, -0.1, 0.8, 0.3, -0.4, 0.6, 0.1, -0.3],
+          "confidence": 0.95
+        },
+        {
+          "text": "create a class for user management",
+          "embedding": [0.3, 0.1, 0.7, 0.2, -0.3, 0.5, 0.2, -0.2],
+          "confidence": 0.92
+        },
+        {
+          "text": "implement sorting algorithm",
+          "embedding": [0.4, -0.2, 0.9, 0.4, -0.5, 0.7, 0.0, -0.4],
+          "confidence": 0.88
+        }
+      ],
+      "centroid": [0.3, -0.067, 0.8, 0.3, -0.4, 0.6, 0.1, -0.3],
+      "threshold": 0.75
+    },
+    "code_editing": {
+      "examples": [
+        {
+          "text": "modify this function to add error handling",
+          "embedding": [-0.1, 0.4, 0.2, 0.6, 0.3, -0.2, 0.5, 0.1],
+          "confidence": 0.89
+        },
+        {
+          "text": "change the variable name in this code",
+          "embedding": [-0.2, 0.5, 0.1, 0.7, 0.2, -0.3, 0.4, 0.2],
+          "confidence": 0.85
+        },
+        {
+          "text": "refactor this method to be more efficient",
+          "embedding": [0.0, 0.3, 0.3, 0.5, 0.4, -0.1, 0.6, 0.0],
+          "confidence": 0.91
+        }
+      ],
+      "centroid": [-0.1, 0.4, 0.2, 0.6, 0.3, -0.2, 0.5, 0.1],
+      "threshold": 0.70
+    },
+    "debugging": {
+      "examples": [
+        {
+          "text": "fix this error in my python code",
+          "embedding": [0.1, -0.6, -0.2, 0.8, 0.7, 0.3, -0.4, 0.5],
+          "confidence": 0.93
+        },
+        {
+          "text": "debug why this function is not working",
+          "embedding": [0.0, -0.5, -0.1, 0.7, 0.6, 0.2, -0.3, 0.4],
+          "confidence": 0.87
+        },
+        {
+          "text": "solve this exception error",
+          "embedding": [0.2, -0.7, -0.3, 0.9, 0.8, 0.4, -0.5, 0.6],
+          "confidence": 0.95
+        }
+      ],
+      "centroid": [0.1, -0.6, -0.2, 0.8, 0.7, 0.3, -0.4, 0.5],
+      "threshold": 0.78
+    },
+    "explanation": {
+      "examples": [
+        {
+          "text": "explain how this algorithm works",
+          "embedding": [0.5, 0.2, -0.3, 0.1, -0.1, 0.8, 0.4, -0.6],
+          "confidence": 0.84
+        },
+        {
+          "text": "what does this function do",
+          "embedding": [0.4, 0.3, -0.2, 0.0, 0.0, 0.7, 0.5, -0.5],
+          "confidence": 0.82
+        },
+        {
+          "text": "help me understand this code",
+          "embedding": [0.6, 0.1, -0.4, 0.2, -0.2, 0.9, 0.3, -0.7],
+          "confidence": 0.86
+        }
+      ],
+      "centroid": [0.5, 0.2, -0.3, 0.1, -0.1, 0.8, 0.4, -0.6],
+      "threshold": 0.65
+    },
+    "optimization": {
+      "examples": [
+        {
+          "text": "optimize this code for better performance",
+          "embedding": [0.7, 0.5, 0.2, -0.3, 0.4, 0.1, 0.8, -0.2],
+          "confidence": 0.90
+        },
+        {
+          "text": "make this function run faster",
+          "embedding": [0.6, 0.4, 0.3, -0.2, 0.3, 0.0, 0.7, -0.1],
+          "confidence": 0.85
+        },
+        {
+          "text": "improve the efficiency of this algorithm",
+          "embedding": [0.8, 0.6, 0.1, -0.4, 0.5, 0.2, 0.9, -0.3],
+          "confidence": 0.92
+        }
+      ],
+      "centroid": [0.7, 0.5, 0.2, -0.3, 0.4, 0.1, 0.8, -0.2],
+      "threshold": 0.72
+    },
+    "testing": {
+      "examples": [
+        {
+          "text": "write unit tests for this function",
+          "embedding": [-0.3, 0.1, 0.6, 0.4, -0.2, -0.5, 0.2, 0.8],
+          "confidence": 0.88
+        },
+        {
+          "text": "create test cases for this class",
+          "embedding": [-0.2, 0.0, 0.7, 0.3, -0.1, -0.4, 0.3, 0.7],
+          "confidence": 0.85
+        },
+        {
+          "text": "test this code with pytest",
+          "embedding": [-0.4, 0.2, 0.5, 0.5, -0.3, -0.6, 0.1, 0.9],
+          "confidence": 0.91
+        }
+      ],
+      "centroid": [-0.3, 0.1, 0.6, 0.4, -0.2, -0.5, 0.2, 0.8],
+      "threshold": 0.68
+    },
+    "documentation": {
+      "examples": [
+        {
+          "text": "write documentation for this API",
+          "embedding": [-0.5, -0.2, 0.1, -0.1, 0.6, 0.4, -0.3, 0.2],
+          "confidence": 0.79
+        },
+        {
+          "text": "add comments to this code",
+          "embedding": [-0.4, -0.1, 0.0, 0.0, 0.5, 0.3, -0.2, 0.1],
+          "confidence": 0.75
+        },
+        {
+          "text": "create a readme file",
+          "embedding": [-0.6, -0.3, 0.2, -0.2, 0.7, 0.5, -0.4, 0.3],
+          "confidence": 0.83
+        }
+      ],
+      "centroid": [-0.5, -0.2, 0.1, -0.1, 0.6, 0.4, -0.3, 0.2],
+      "threshold": 0.60
+    },
+    "file_operations": {
+      "examples": [
+        {
+          "text": "read data from a CSV file",
+          "embedding": [0.2, -0.4, 0.4, -0.6, -0.3, 0.1, 0.5, 0.7],
+          "confidence": 0.82
+        },
+        {
+          "text": "write JSON data to file",
+          "embedding": [0.3, -0.3, 0.5, -0.5, -0.2, 0.2, 0.6, 0.6],
+          "confidence": 0.80
+        },
+        {
+          "text": "parse XML file content",
+          "embedding": [0.1, -0.5, 0.3, -0.7, -0.4, 0.0, 0.4, 0.8],
+          "confidence": 0.84
+        }
+      ],
+      "centroid": [0.2, -0.4, 0.4, -0.6, -0.3, 0.1, 0.5, 0.7],
+      "threshold": 0.63
+    },
+    "general_query": {
+      "examples": [
+        {
+          "text": "what is python programming",
+          "embedding": [0.0, 0.0, 0.1, 0.1, 0.0, 0.2, 0.1, 0.0],
+          "confidence": 0.65
+        },
+        {
+          "text": "help me with coding questions",
+          "embedding": [0.1, 0.1, 0.0, 0.2, 0.1, 0.1, 0.0, 0.1],
+          "confidence": 0.62
+        },
+        {
+          "text": "general programming advice",
+          "embedding": [-0.1, 0.0, 0.2, 0.0, 0.2, 0.0, 0.2, -0.1],
+          "confidence": 0.68
+        }
+      ],
+      "centroid": [0.0, 0.033, 0.1, 0.1, 0.1, 0.1, 0.1, 0.0],
+      "threshold": 0.50
+    }
+  },
+  "similarity_settings": {
+    "distance_metric": "cosine",
+    "normalization": "l2",
+    "min_similarity_threshold": 0.5,
+    "max_cache_size": 1000,
+    "cache_expiry_hours": 168
+  }
+}

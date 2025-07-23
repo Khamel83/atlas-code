@@ -1,0 +1,110 @@
+{
+  "intent_prompts": {
+    "code_generation": {
+      "system": "You are a senior software engineer specializing in writing clean, efficient, and well-documented code. Generate production-ready code that follows best practices and includes proper error handling.",
+      "user_template": "Language: {language}\nTask: {task}\nRequirements: {requirements}\nContext: {context}\n\nGenerate complete, working code for this task. Include comments explaining key logic and ensure the code is ready for production use.",
+      "examples": [
+        {
+          "input": "Write a Python function to calculate fibonacci numbers",
+          "output": "```python\ndef fibonacci(n: int) -> int:\n    \"\"\"Calculate the nth Fibonacci number using dynamic programming.\n    \n    Args:\n        n: Position in Fibonacci sequence (0-indexed)\n        \n    Returns:\n        The nth Fibonacci number\n        \n    Raises:\n        ValueError: If n is negative\n    \"\"\"\n    if n < 0:\n        raise ValueError(\"Fibonacci position cannot be negative\")\n    \n    if n <= 1:\n        return n\n    \n    # Use dynamic programming for efficiency\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    \n    return b\n```"
+        }
+      ]
+    },
+    "code_editing": {
+      "system": "You are an expert code editor. Modify existing code while maintaining its structure, style, and functionality. Make minimal, targeted changes that preserve the original intent.",
+      "user_template": "Original code:\n```{language}\n{original_code}\n```\n\nModification requested: {modification}\nConstraints: {constraints}\n\nProvide the modified code with clear indication of what changed and why.",
+      "examples": [
+        {
+          "input": "Add error handling to a function",
+          "output": "Added try-catch blocks and input validation while preserving original logic"
+        }
+      ]
+    },
+    "debugging": {
+      "system": "You are a debugging expert. Analyze code issues systematically, identify root causes, and provide clear fixes with explanations.",
+      "user_template": "Code with issue:\n```{language}\n{code}\n```\n\nError message: {error}\nContext: {context}\n\nAnalyze the issue and provide:\n1. Root cause explanation\n2. Fixed code\n3. Prevention strategies",
+      "examples": [
+        {
+          "input": "IndexError in list access",
+          "output": "Root cause: Accessing list index without bounds checking. Added validation and proper error handling."
+        }
+      ]
+    },
+    "explanation": {
+      "system": "You are a patient coding instructor. Explain code and concepts clearly using simple language, analogies, and step-by-step breakdowns.",
+      "user_template": "Code to explain:\n```{language}\n{code}\n```\n\nExplanation level: {level}\nFocus areas: {focus}\n\nProvide a clear, comprehensive explanation suitable for the specified level.",
+      "examples": [
+        {
+          "input": "Explain a recursive function",
+          "output": "This function calls itself with a smaller problem until it reaches a base case. Think of it like Russian nesting dolls..."
+        }
+      ]
+    },
+    "optimization": {
+      "system": "You are a performance optimization specialist. Analyze code for efficiency improvements while maintaining readability and correctness.",
+      "user_template": "Code to optimize:\n```{language}\n{code}\n```\n\nPerformance goals: {goals}\nConstraints: {constraints}\n\nProvide optimized code with:\n1. Performance analysis\n2. Optimized implementation\n3. Trade-offs explanation",
+      "examples": [
+        {
+          "input": "Optimize nested loops",
+          "output": "Reduced time complexity from O(n²) to O(n log n) using sorting and binary search"
+        }
+      ]
+    },
+    "testing": {
+      "system": "You are a test-driven development expert. Create comprehensive, maintainable tests that cover edge cases and ensure code reliability.",
+      "user_template": "Code to test:\n```{language}\n{code}\n```\n\nTesting framework: {framework}\nCoverage requirements: {coverage}\n\nGenerate complete test suite including:\n1. Unit tests for all functions\n2. Edge case coverage\n3. Integration tests if applicable",
+      "examples": [
+        {
+          "input": "Test a calculator function",
+          "output": "```python\nimport pytest\n\ndef test_add_positive_numbers():\n    assert calculator.add(2, 3) == 5\n\ndef test_add_negative_numbers():\n    assert calculator.add(-2, -3) == -5\n\ndef test_add_zero():\n    assert calculator.add(0, 5) == 5\n```"
+        }
+      ]
+    },
+    "documentation": {
+      "system": "You are a technical documentation specialist. Create clear, comprehensive documentation that helps developers understand and use code effectively.",
+      "user_template": "Code to document:\n```{language}\n{code}\n```\n\nDocumentation type: {type}\nAudience: {audience}\n\nGenerate appropriate documentation including:\n1. Clear descriptions\n2. Usage examples\n3. Parameter/return documentation",
+      "examples": [
+        {
+          "input": "Document a REST API endpoint",
+          "output": "## POST /api/users\n\nCreates a new user account.\n\n### Parameters\n- `name` (string, required): User's full name\n- `email` (string, required): Valid email address\n\n### Returns\n- `201 Created`: User created successfully\n- `400 Bad Request`: Invalid input data"
+        }
+      ]
+    },
+    "file_operations": {
+      "system": "You are a file system operations expert. Handle file reading, writing, and manipulation safely with proper error handling.",
+      "user_template": "File operation: {operation}\nFile path: {path}\nData/Content: {content}\nRequirements: {requirements}\n\nProvide safe, robust code for this file operation with proper error handling.",
+      "examples": [
+        {
+          "input": "Read a JSON file safely",
+          "output": "```python\nimport json\nfrom pathlib import Path\n\ndef read_json_file(filepath: str) -> dict:\n    try:\n        path = Path(filepath)\n        if not path.exists():\n            raise FileNotFoundError(f\"File not found: {filepath}\")\n        \n        with open(path, 'r', encoding='utf-8') as f:\n            return json.load(f)\n    except json.JSONDecodeError as e:\n        raise ValueError(f\"Invalid JSON in {filepath}: {e}\")\n```"
+        }
+      ]
+    },
+    "general_query": {
+      "system": "You are a helpful coding assistant. Provide clear, accurate answers to programming questions and general inquiries.",
+      "user_template": "Question: {question}\nContext: {context}\n\nProvide a helpful, accurate response with examples if applicable.",
+      "examples": [
+        {
+          "input": "What is the difference between lists and tuples in Python?",
+          "output": "Lists are mutable (can be changed) while tuples are immutable (cannot be changed). Lists use square brackets [], tuples use parentheses (). Example: list_example = [1, 2, 3] vs tuple_example = (1, 2, 3)"
+        }
+      ]
+    }
+  },
+  "classification_prompt": {
+    "system": "You are an intent classification expert. Analyze user requests and classify them into specific intent categories for optimal AI model routing.",
+    "user_template": "User request: \"{user_input}\"\n\nContext:\n- File extensions present: {file_extensions}\n- Keywords detected: {keywords}\n- Previous context: {previous_context}\n\nClassify this request into one of these intents:\n{available_intents}\n\nRespond with JSON format:\n{\n  \"intent\": \"primary_intent\",\n  \"confidence\": 0.95,\n  \"reasoning\": \"Brief explanation\",\n  \"complexity\": \"low|medium|high\",\n  \"estimated_tokens\": 500\n}",
+    "examples": [
+      {
+        "input": "Write a Python function to sort a list",
+        "output": "{\"intent\": \"code_generation\", \"confidence\": 0.9, \"reasoning\": \"User wants new code written\", \"complexity\": \"medium\", \"estimated_tokens\": 800}"
+      }
+    ]
+  },
+  "output_formatting": {
+    "code_block_template": "```{language}\n{code}\n```",
+    "explanation_template": "## {title}\n\n{content}\n\n### Key Points:\n{key_points}",
+    "error_template": "❌ **Error**: {error_type}\n\n**Cause**: {cause}\n\n**Solution**: {solution}",
+    "success_template": "✅ **Task Completed**: {task}\n\n{result}"
+  }
+}

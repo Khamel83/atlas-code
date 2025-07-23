@@ -1,0 +1,289 @@
+{
+  "pattern_classification_rules": {
+    "code_generation": {
+      "priority": 90,
+      "patterns": [
+        {
+          "regex": "(?i)(write|create|generate|build|make|implement)\\s+(a\\s+)?(function|class|method|script|program|app|module)",
+          "confidence": 0.9,
+          "examples": ["write a function", "create a class", "generate a script"]
+        },
+        {
+          "regex": "(?i)(code|program|script)\\s+(for|to|that)\\s+",
+          "confidence": 0.8,
+          "examples": ["code for sorting", "program to calculate", "script that processes"]
+        },
+        {
+          "regex": "(?i)^(def |class |function |int main|public class)",
+          "confidence": 0.95,
+          "examples": ["def calculate", "class MyClass", "function processData"]
+        },
+        {
+          "regex": "(?i)(algorithm|solution)\\s+(for|to|that)",
+          "confidence": 0.85,
+          "examples": ["algorithm for search", "solution to problem"]
+        }
+      ],
+      "negative_patterns": [
+        "(?i)(explain|understand|what)",
+        "(?i)(fix|debug|error)",
+        "(?i)(document|comment)"
+      ]
+    },
+    "code_editing": {
+      "priority": 85,
+      "patterns": [
+        {
+          "regex": "(?i)(edit|modify|change|update|alter|adjust)\\s+(this|the|my)\\s+(code|function|class|file)",
+          "confidence": 0.9,
+          "examples": ["edit this function", "modify the code", "change my class"]
+        },
+        {
+          "regex": "(?i)(add|insert|include|append)\\s+.+\\s+(to|in|into)\\s+(this|the|my)",
+          "confidence": 0.8,
+          "examples": ["add logging to this", "insert error handling in the function"]
+        },
+        {
+          "regex": "(?i)(remove|delete|take out)\\s+.+\\s+(from|in)\\s+(this|the|my)",
+          "confidence": 0.8,
+          "examples": ["remove debug prints from this", "delete unused variables in the code"]
+        },
+        {
+          "regex": "(?i)(replace|substitute)\\s+.+\\s+with\\s+",
+          "confidence": 0.85,
+          "examples": ["replace loops with list comprehension", "substitute variables with constants"]
+        },
+        {
+          "regex": "(?i)(refactor|restructure|reorganize)\\s+(this|the|my)",
+          "confidence": 0.9,
+          "examples": ["refactor this function", "restructure the class"]
+        }
+      ],
+      "context_requirements": ["existing_code_present"]
+    },
+    "debugging": {
+      "priority": 95,
+      "patterns": [
+        {
+          "regex": "(?i)(error|exception|bug|issue|problem|broken|fail|crash)",
+          "confidence": 0.9,
+          "examples": ["getting an error", "exception occurred", "bug in my code"]
+        },
+        {
+          "regex": "(?i)(debug|troubleshoot|diagnose)\\s+",
+          "confidence": 0.95,
+          "examples": ["debug this function", "troubleshoot the issue"]
+        },
+        {
+          "regex": "(?i)(fix|solve|resolve)\\s+(this|the|my)\\s+(error|bug|issue|problem)",
+          "confidence": 0.9,
+          "examples": ["fix this error", "solve the problem", "resolve my issue"]
+        },
+        {
+          "regex": "(?i)(not\\s+working|doesn't\\s+work|won't\\s+run|failing)",
+          "confidence": 0.85,
+          "examples": ["code not working", "function doesn't work", "script won't run"]
+        },
+        {
+          "regex": "(?i)(traceback|stack\\s+trace|exception\\s+in)",
+          "confidence": 0.95,
+          "examples": ["getting traceback", "stack trace shows", "exception in line"]
+        }
+      ],
+      "context_indicators": ["error_message_present", "stack_trace_present"]
+    },
+    "explanation": {
+      "priority": 70,
+      "patterns": [
+        {
+          "regex": "(?i)(explain|describe|tell\\s+me|what\\s+is|what\\s+does|how\\s+does)",
+          "confidence": 0.8,
+          "examples": ["explain this code", "what does this function do", "how does this work"]
+        },
+        {
+          "regex": "(?i)(understand|clarify|meaning|purpose)\\s+(of|this|the)",
+          "confidence": 0.75,
+          "examples": ["understand this algorithm", "clarify the purpose", "meaning of this code"]
+        },
+        {
+          "regex": "(?i)(what\\s+is\\s+the\\s+difference|compare|versus|vs)",
+          "confidence": 0.8,
+          "examples": ["what is the difference between", "compare these approaches"]
+        },
+        {
+          "regex": "(?i)^(what|how|why|when|where)\\s+",
+          "confidence": 0.7,
+          "examples": ["what happens when", "how to use", "why does this"]
+        }
+      ],
+      "negative_patterns": [
+        "(?i)(write|create|generate|build)",
+        "(?i)(fix|debug|error)"
+      ]
+    },
+    "optimization": {
+      "priority": 80,
+      "patterns": [
+        {
+          "regex": "(?i)(optimize|improve|enhance|speed\\s+up|make\\s+faster)",
+          "confidence": 0.9,
+          "examples": ["optimize this code", "improve performance", "make faster"]
+        },
+        {
+          "regex": "(?i)(performance|efficiency|slow|faster|better)",
+          "confidence": 0.8,
+          "examples": ["performance issues", "code is slow", "make it better"]
+        },
+        {
+          "regex": "(?i)(reduce|minimize|decrease)\\s+(time|memory|space|complexity)",
+          "confidence": 0.85,
+          "examples": ["reduce time complexity", "minimize memory usage"]
+        },
+        {
+          "regex": "(?i)(big\\s+o|complexity|algorithm\\s+efficiency)",
+          "confidence": 0.9,
+          "examples": ["big o notation", "time complexity", "algorithm efficiency"]
+        }
+      ]
+    },
+    "testing": {
+      "priority": 75,
+      "patterns": [
+        {
+          "regex": "(?i)(test|testing|unit\\s+test|integration\\s+test)",
+          "confidence": 0.9,
+          "examples": ["write tests", "unit testing", "test this function"]
+        },
+        {
+          "regex": "(?i)(pytest|unittest|jest|mocha|test\\s+case)",
+          "confidence": 0.95,
+          "examples": ["using pytest", "unittest framework", "jest tests"]
+        },
+        {
+          "regex": "(?i)(mock|stub|fixture|test\\s+data)",
+          "confidence": 0.8,
+          "examples": ["mock this function", "test fixtures", "stub the API"]
+        },
+        {
+          "regex": "(?i)(verify|validate|check|assert)",
+          "confidence": 0.7,
+          "examples": ["verify the output", "validate input", "check if works"]
+        }
+      ]
+    },
+    "documentation": {
+      "priority": 60,
+      "patterns": [
+        {
+          "regex": "(?i)(document|documentation|docs|readme)",
+          "confidence": 0.9,
+          "examples": ["document this code", "write documentation", "create readme"]
+        },
+        {
+          "regex": "(?i)(comment|comments|docstring|doc\\s+string)",
+          "confidence": 0.85,
+          "examples": ["add comments", "write docstrings", "comment this function"]
+        },
+        {
+          "regex": "(?i)(api\\s+doc|user\\s+guide|manual|reference)",
+          "confidence": 0.8,
+          "examples": ["API documentation", "user guide", "reference manual"]
+        }
+      ]
+    },
+    "file_operations": {
+      "priority": 65,
+      "patterns": [
+        {
+          "regex": "(?i)(read|write|save|load|open|close)\\s+(file|from\\s+file|to\\s+file)",
+          "confidence": 0.9,
+          "examples": ["read file", "write to file", "save data", "load from file"]
+        },
+        {
+          "regex": "(?i)(csv|json|xml|yaml|txt|log)\\s+(file|data)",
+          "confidence": 0.8,
+          "examples": ["CSV file", "JSON data", "XML parsing", "YAML config"]
+        },
+        {
+          "regex": "(?i)(parse|process|convert)\\s+(file|data)",
+          "confidence": 0.75,
+          "examples": ["parse CSV", "process data file", "convert XML"]
+        },
+        {
+          "regex": "(?i)(file\\s+handling|file\\s+io|file\\s+operations)",
+          "confidence": 0.85,
+          "examples": ["file handling", "file I/O operations"]
+        }
+      ]
+    },
+    "general_query": {
+      "priority": 50,
+      "patterns": [
+        {
+          "regex": "(?i)^(hi|hello|hey|help|can\\s+you|please)",
+          "confidence": 0.7,
+          "examples": ["hi there", "can you help", "please assist"]
+        },
+        {
+          "regex": "(?i)(question|ask|wondering|curious)",
+          "confidence": 0.6,
+          "examples": ["I have a question", "wondering about", "curious how"]
+        },
+        {
+          "regex": "(?i)(best\\s+practice|recommendation|suggest|advice)",
+          "confidence": 0.65,
+          "examples": ["best practices", "any recommendations", "what do you suggest"]
+        }
+      ]
+    }
+  },
+  "classification_logic": {
+    "scoring_method": "weighted_priority",
+    "minimum_confidence": 0.5,
+    "pattern_combination": "highest_score",
+    "negative_pattern_penalty": 0.3,
+    "context_bonus": 0.1,
+    "fallback_intent": "general_query",
+    "multi_match_resolution": "highest_priority"
+  },
+  "context_patterns": {
+    "file_context": {
+      "code_file_extensions": [".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs"],
+      "config_file_extensions": [".json", ".yaml", ".yml", ".xml", ".ini"],
+      "documentation_extensions": [".md", ".txt", ".rst", ".doc"]
+    },
+    "error_indicators": [
+      "traceback", "exception", "error:", "failed", "errno",
+      "syntax error", "runtime error", "type error", "name error"
+    ],
+    "complexity_keywords": {
+      "high": [
+        "algorithm", "optimization", "performance", "architecture",
+        "design pattern", "data structure", "complexity", "scalability"
+      ],
+      "medium": [
+        "function", "class", "module", "refactor", "integration",
+        "database", "api", "framework", "library"
+      ],
+      "low": [
+        "variable", "comment", "print", "import", "basic",
+        "simple", "quick", "small"
+      ]
+    }
+  },
+  "preprocessing": {
+    "normalize_whitespace": true,
+    "convert_to_lowercase": true,
+    "remove_code_blocks": false,
+    "extract_keywords": true,
+    "stem_words": false,
+    "remove_stop_words": false
+  },
+  "confidence_adjustments": {
+    "exact_keyword_match": 0.1,
+    "multiple_pattern_match": 0.15,
+    "context_alignment": 0.1,
+    "file_extension_match": 0.05,
+    "previous_intent_consistency": 0.05
+  }
+}

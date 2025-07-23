@@ -1,0 +1,159 @@
+{
+  "routing_rules": {
+    "code_generation": {
+      "description": "Writing new code from scratch",
+      "default_tier": "premium",
+      "confidence_threshold": 0.8,
+      "keywords": ["write", "create", "generate", "build", "implement", "code"],
+      "patterns": [
+        "write.*function",
+        "create.*class",
+        "implement.*algorithm",
+        "build.*feature",
+        "generate.*script"
+      ],
+      "context_requirements": ["language", "functionality"],
+      "estimated_tokens": 1500
+    },
+    "code_editing": {
+      "description": "Modifying existing code",
+      "default_tier": "standard",
+      "confidence_threshold": 0.7,
+      "keywords": ["edit", "modify", "change", "update", "fix", "refactor"],
+      "patterns": [
+        "edit.*file",
+        "modify.*function",
+        "change.*to",
+        "update.*code",
+        "fix.*bug",
+        "refactor.*"
+      ],
+      "context_requirements": ["existing_code", "modification_type"],
+      "estimated_tokens": 800
+    },
+    "debugging": {
+      "description": "Finding and fixing bugs",
+      "default_tier": "premium",
+      "confidence_threshold": 0.75,
+      "keywords": ["debug", "error", "bug", "issue", "problem", "broken"],
+      "patterns": [
+        "debug.*error",
+        "fix.*bug",
+        "solve.*problem",
+        "error.*in",
+        "not.*working"
+      ],
+      "context_requirements": ["error_message", "code_context"],
+      "estimated_tokens": 1200
+    },
+    "explanation": {
+      "description": "Explaining code or concepts",
+      "default_tier": "standard",
+      "confidence_threshold": 0.6,
+      "keywords": ["explain", "what", "how", "why", "understand", "clarify"],
+      "patterns": [
+        "explain.*code",
+        "what.*does",
+        "how.*works",
+        "why.*",
+        "understand.*"
+      ],
+      "context_requirements": ["code_snippet"],
+      "estimated_tokens": 600
+    },
+    "optimization": {
+      "description": "Improving code performance or structure",
+      "default_tier": "premium",
+      "confidence_threshold": 0.8,
+      "keywords": ["optimize", "improve", "performance", "faster", "efficient"],
+      "patterns": [
+        "optimize.*code",
+        "improve.*performance",
+        "make.*faster",
+        "more.*efficient"
+      ],
+      "context_requirements": ["existing_code", "performance_metrics"],
+      "estimated_tokens": 1000
+    },
+    "testing": {
+      "description": "Writing tests or test-related tasks",
+      "default_tier": "standard",
+      "confidence_threshold": 0.7,
+      "keywords": ["test", "unittest", "pytest", "spec", "verify"],
+      "patterns": [
+        "write.*test",
+        "test.*function",
+        "unit.*test",
+        "verify.*"
+      ],
+      "context_requirements": ["code_to_test"],
+      "estimated_tokens": 700
+    },
+    "documentation": {
+      "description": "Writing documentation or comments",
+      "default_tier": "budget",
+      "confidence_threshold": 0.6,
+      "keywords": ["document", "comment", "docstring", "readme", "docs"],
+      "patterns": [
+        "write.*documentation",
+        "add.*comments",
+        "create.*readme",
+        "document.*"
+      ],
+      "context_requirements": ["code_context"],
+      "estimated_tokens": 400
+    },
+    "file_operations": {
+      "description": "File reading, writing, or manipulation",
+      "default_tier": "budget",
+      "confidence_threshold": 0.8,
+      "keywords": ["read", "write", "file", "save", "load", "open"],
+      "patterns": [
+        "read.*file",
+        "write.*to.*file",
+        "save.*",
+        "load.*"
+      ],
+      "context_requirements": ["file_path"],
+      "estimated_tokens": 300
+    },
+    "general_query": {
+      "description": "General questions or conversation",
+      "default_tier": "budget",
+      "confidence_threshold": 0.5,
+      "keywords": ["help", "question", "how", "what", "can"],
+      "patterns": [
+        "help.*with",
+        "question.*about",
+        "can.*you"
+      ],
+      "context_requirements": [],
+      "estimated_tokens": 200
+    }
+  },
+  "fallback_classification": {
+    "default_intent": "general_query",
+    "min_confidence": 0.3,
+    "enable_multi_intent": true,
+    "conflict_resolution": "highest_confidence"
+  },
+  "context_analysis": {
+    "file_extensions": {
+      ".py": "python",
+      ".js": "javascript",
+      ".ts": "typescript",
+      ".java": "java",
+      ".cpp": "cpp",
+      ".c": "c",
+      ".go": "go",
+      ".rs": "rust",
+      ".rb": "ruby",
+      ".php": "php"
+    },
+    "complexity_indicators": {
+      "high": ["algorithm", "optimization", "architecture", "design pattern"],
+      "medium": ["function", "class", "module", "refactor"],
+      "low": ["variable", "comment", "import", "print"]
+    }
+  }
+}

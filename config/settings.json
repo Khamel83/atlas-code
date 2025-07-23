@@ -1,0 +1,111 @@
+{
+  "user_preferences": {
+    "default_language": "python",
+    "preferred_tier": "standard",
+    "max_budget_per_session": 2.0,
+    "auto_save_history": true,
+    "verbose_output": false,
+    "code_style": "pep8",
+    "include_comments": true,
+    "prefer_explanations": false
+  },
+  "system_settings": {
+    "max_context_length": 100000,
+    "token_buffer": 1000,
+    "retry_attempts": 3,
+    "timeout_seconds": 30,
+    "enable_caching": true,
+    "cache_duration_hours": 24,
+    "log_level": "INFO",
+    "enable_telemetry": true
+  },
+  "api_configuration": {
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "timeout": 30,
+      "max_retries": 3,
+      "retry_delay": 1,
+      "headers": {
+        "HTTP-Referer": "https://atlas-code.dev",
+        "X-Title": "Atlas Code V5"
+      }
+    },
+    "rate_limits": {
+      "requests_per_minute": 60,
+      "tokens_per_minute": 50000,
+      "requests_per_hour": 3000
+    }
+  },
+  "file_handling": {
+    "max_file_size_mb": 10,
+    "allowed_extensions": [
+      ".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs",
+      ".rb", ".php", ".html", ".css", ".json", ".yaml", ".yml",
+      ".md", ".txt", ".sh", ".sql", ".xml"
+    ],
+    "backup_before_edit": true,
+    "backup_directory": "./backups",
+    "auto_format": true,
+    "format_on_save": true
+  },
+  "code_execution": {
+    "enable_execution": true,
+    "sandboxed": true,
+    "timeout_seconds": 10,
+    "max_memory_mb": 100,
+    "allowed_imports": [
+      "os", "sys", "json", "datetime", "math", "random",
+      "collections", "itertools", "functools", "pathlib",
+      "typing", "dataclasses", "enum", "abc"
+    ],
+    "blocked_imports": [
+      "subprocess", "socket", "urllib", "requests",
+      "http", "ftplib", "smtplib", "telnetlib"
+    ],
+    "allowed_file_operations": ["read", "write"],
+    "restricted_paths": [
+      "/etc", "/usr", "/bin", "/sbin", "/var", "/tmp",
+      "~/.ssh", "~/.aws", "~/.config"
+    ]
+  },
+  "output_formatting": {
+    "colored_output": true,
+    "show_timestamps": false,
+    "show_token_usage": true,
+    "show_cost_estimates": true,
+    "compact_mode": false,
+    "markdown_rendering": true,
+    "syntax_highlighting": true
+  },
+  "error_handling": {
+    "show_stack_traces": false,
+    "detailed_error_messages": true,
+    "auto_retry_on_failure": true,
+    "fallback_to_lower_tier": true,
+    "save_failed_requests": true,
+    "error_log_file": "./logs/errors.log"
+  },
+  "memory_management": {
+    "max_history_entries": 1000,
+    "history_file": "./data/memory.jsonl",
+    "compress_old_entries": true,
+    "cleanup_after_days": 30,
+    "context_window_overlap": 0.1
+  },
+  "telemetry": {
+    "collect_usage_stats": true,
+    "collect_performance_metrics": true,
+    "collect_error_reports": false,
+    "anonymize_data": true,
+    "telemetry_file": "./data/performance.jsonl",
+    "upload_frequency": "daily"
+  },
+  "development": {
+    "debug_mode": false,
+    "mock_api_calls": false,
+    "log_all_requests": false,
+    "save_raw_responses": false,
+    "enable_profiling": false,
+    "test_mode": false
+  }
+}

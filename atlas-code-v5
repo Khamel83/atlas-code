@@ -1,0 +1,249 @@
+#!/usr/bin/env python3
+"""
+Atlas Code V5: Ultimate Self-Contained Intelligent Router
+Main executable entry point for the Atlas Code V5 system.
+"""
+
+import sys
+import os
+import argparse
+from pathlib import Path
+
+# Add the atlas_core directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'atlas_core'))
+
+def main():
+    """Main entry point for Atlas Code V5."""
+    parser = argparse.ArgumentParser(
+        description="Atlas Code V5: Self-Contained Intelligent Coding Assistant",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  atlas-code-v5 "write a python function to sort a list"
+  atlas-code-v5 --interactive
+  atlas-code-v5 --file mycode.py "optimize this code"
+  atlas-code-v5 --budget 1.50 "debug this error"
+        """
+    )
+    
+    # Main arguments
+    parser.add_argument(
+        'query',
+        nargs='?',
+        help='Your coding request or question'
+    )
+    
+    parser.add_argument(
+        '--interactive', '-i',
+        action='store_true',
+        help='Start interactive mode'
+    )
+    
+    parser.add_argument(
+        '--file', '-f',
+        help='Path to code file for context'
+    )
+    
+    parser.add_argument(
+        '--language', '-l',
+        help='Programming language (auto-detected if not specified)'
+    )
+    
+    parser.add_argument(
+        '--tier', '-t',
+        choices=['budget', 'standard', 'premium'],
+        help='Force specific model tier'
+    )
+    
+    parser.add_argument(
+        '--budget', '-b',
+        type=float,
+        help='Set session budget limit in USD'
+    )
+    
+    parser.add_argument(
+        '--output', '-o',
+        help='Output file path (default: stdout)'
+    )
+    
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Enable verbose output'
+    )
+    
+    parser.add_argument(
+        '--config',
+        help='Path to custom config directory'
+    )
+    
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Show what would be done without making API calls'
+    )
+    
+    parser.add_argument(
+        '--version',
+        action='version',
+        version='Atlas Code V5.0.0'
+    )
+    
+    args = parser.parse_args()
+    
+    # Validate arguments
+    if not args.interactive and not args.query:
+        parser.error("Either provide a query or use --interactive mode")
+    
+    try:
+        # Import and initialize the hybrid router
+        from hybrid_router import HybridRouter
+        from budget_optimizer import BudgetOptimizer
+        from code_executor import CodeExecutor
+        
+        # Initialize components
+        config_dir = args.config or os.path.join(os.path.dirname(__file__), 'config')
+        
+        router = HybridRouter(config_dir)
+        budget_optimizer = BudgetOptimizer(config_dir)
+        code_executor = CodeExecutor(config_dir)
+        
+        # Set session budget if specified
+        if args.budget:
+            budget_optimizer.set_session_budget(args.budget)
+        
+        if args.interactive:
+            print("🚀 Atlas Code V5 Interactive Mode")
+            print("Type 'exit' to quit, 'help' for commands\n")
+            
+            while True:
+                try:
+                    query = input("atlas> ").strip()
+                    
+                    if query.lower() in ['exit', 'quit', 'q']:
+                        print("Goodbye! 👋")
+                        break
+                    elif query.lower() == 'help':
+                        show_help()
+                        continue
+                    elif query.lower() == 'budget':
+                        budget_optimizer.show_budget_status()
+                        continue
+                    elif not query:
+                        continue
+                    
+                    # Process the query
+                    result = process_query(
+                        query, args, router, budget_optimizer, code_executor
+                    )
+                    
+                    if result:
+                        print(f"\n{result}\n")
+                        
+                except KeyboardInterrupt:
+                    print("\nGoodbye! 👋")
+                    break
+                except Exception as e:
+                    print(f"❌ Error: {e}")
+                    if args.verbose:
+                        import traceback
+                        traceback.print_exc()
+        else:
+            # Single query mode
+            result = process_query(
+                args.query, args, router, budget_optimizer, code_executor
+            )
+            
+            if result:
+                if args.output:
+                    with open(args.output, 'w') as f:
+                        f.write(result)
+                    print(f"✅ Output saved to {args.output}")
+                else:
+                    print(result)
+    
+    except ImportError as e:
+        print(f"❌ Import Error: {e}")
+        print("Make sure all Atlas Code V5 components are properly installed.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        if args.verbose if 'args' in locals() else False:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+def process_query(query, args, router, budget_optimizer, code_executor):
+    """Process a single query through the Atlas Code V5 pipeline."""
+    try:
+        # Load file context if specified
+        file_context = None
+        if args.file:
+            file_path = Path(args.file)
+            if file_path.exists():
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    file_context = f.read()
+            else:
+                print(f"⚠️  Warning: File not found: {args.file}")
+        
+        # Classify the intent
+        classification = router.classify_intent(
+            query, 
+            file_context=file_context,
+            language=args.language
+        )
+        
+        if args.verbose:
+            print(f"🧠 Intent: {classification['intent']} (confidence: {classification['confidence']:.2f})")
+        
+        # Get optimal model based on budget and intent
+        model_selection = budget_optimizer.select_model(
+            classification['intent'],
+            classification['complexity'],
+            forced_tier=args.tier
+        )
+        
+        if args.verbose:
+            print(f"🤖 Selected: {model_selection['model']} (tier: {model_selection['tier']})")
+        
+        if args.dry_run:
+            return f"Would use {model_selection['model']} for {classification['intent']} task"
+        
+        # Execute the request
+        result = code_executor.execute_request(
+            query=query,
+            intent=classification['intent'],
+            model=model_selection['model'],
+            file_context=file_context,
+            language=args.language
+        )
+        
+        # Update budget tracking
+        budget_optimizer.track_usage(
+            model_selection['model'],
+            result.get('tokens_used', 0),
+            result.get('cost', 0.0)
+        )
+        
+        return result.get('response', 'No response generated')
+        
+    except Exception as e:
+        raise Exception(f"Query processing failed: {e}")
+
+def show_help():
+    """Show interactive mode help."""
+    print("""
+Available commands:
+  help     - Show this help message
+  budget   - Show current budget status
+  exit     - Exit Atlas Code V5
+  
+Usage examples:
+  > write a python function to calculate fibonacci
+  > debug this error: NameError: name 'x' is not defined
+  > explain how binary search works
+  > optimize this slow code
+    """)
+
+if __name__ == '__main__':
+    main()

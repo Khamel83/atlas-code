@@ -8,7 +8,7 @@ for maximum accuracy and 100% uptime.
 import json
 import re
 import logging
-import numpy as np
+import math
 from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 import os
@@ -63,6 +63,7 @@ class HybridRouter:
             logger.info("AI classification enabled with OpenRouter")
         except Exception as e:
             logger.warning(f"AI classification disabled: {e}")
+            self.openrouter_client = None
             self.ai_classification_enabled = False
         
         # Classification history for learning
@@ -292,7 +293,7 @@ class HybridRouter:
         
         for intent, intent_data in cache.items():
             if 'centroid' in intent_data:
-                centroid = np.array(intent_data['centroid'])
+                centroid = intent_data['centroid']
                 similarity = self._cosine_similarity(input_embedding, centroid)
                 
                 # Apply threshold
@@ -446,31 +447,31 @@ class HybridRouter:
         
         return meaningful_words[:10]  # Limit to 10 keywords
     
-    def _create_simple_embedding(self, text: str) -> np.ndarray:
+    def _create_simple_embedding(self, text: str) -> List[float]:
         """Create a simple embedding for text (placeholder for real embeddings)."""
         # This is a very simple embedding - in production, use proper embeddings
         words = text.lower().split()
         
         # Simple hash-based embedding
-        embedding = np.zeros(8)  # Match the dimension in semantic cache
+        embedding = [0.0] * 8  # Match the dimension in semantic cache
         
         for i, word in enumerate(words[:8]):
             hash_val = hash(word) % 100
             embedding[i % 8] += hash_val / 100.0
         
         # Normalize
-        norm = np.linalg.norm(embedding)
+        norm = math.sqrt(sum(x * x for x in embedding))
         if norm > 0:
-            embedding = embedding / norm
+            embedding = [x / norm for x in embedding]
         
         return embedding
     
-    def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
+    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
         """Calculate cosine similarity between two vectors."""
         try:
-            dot_product = np.dot(a, b)
-            norm_a = np.linalg.norm(a)
-            norm_b = np.linalg.norm(b)
+            dot_product = sum(x * y for x, y in zip(a, b))
+            norm_a = math.sqrt(sum(x * x for x in a))
+            norm_b = math.sqrt(sum(x * x for x in b))
             
             if norm_a == 0 or norm_b == 0:
                 return 0.0
