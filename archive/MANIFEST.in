@@ -2,19 +2,19 @@
 
 global-exclude .DS_Store
 
-recursive-exclude aider/website/examples *
-recursive-exclude aider/website/_posts *
+recursive-exclude ralex/website/examples *
+recursive-exclude ralex/website/_posts *
 
-exclude aider/website/HISTORY.md
-exclude aider/website/docs/benchmarks*.md
-exclude aider/website/docs/ctags.md
-exclude aider/website/docs/unified-diffs.md
+exclude ralex/website/HISTORY.md
+exclude ralex/website/docs/benchmarks*.md
+exclude ralex/website/docs/ctags.md
+exclude ralex/website/docs/unified-diffs.md
 
-exclude aider/website/install.ps1
-exclude aider/website/install.sh
+exclude ralex/website/install.ps1
+exclude ralex/website/install.sh
 
-recursive-exclude aider/website/docs/leaderboards *
-recursive-exclude aider/website/assets *
-recursive-exclude aider/website *.js
-recursive-exclude aider/website *.html
-recursive-exclude aider/website *.yml
+recursive-exclude ralex/website/docs/leaderboards *
+recursive-exclude ralex/website/assets *
+recursive-exclude ralex/website *.js
+recursive-exclude ralex/website *.html
+recursive-exclude ralex/website *.yml
