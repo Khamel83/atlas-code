@@ -1,0 +1,8 @@
+# Atlas Code V2 Requirements
+# This installs vanilla Aider plus minimal dependencies for Atlas Code wrapper
+
+# Core AI coding assistant (unchanged)
+aider-chat>=0.85.0
+
+# Atlas Code V2 wrapper dependencies  
+pathlib2>=2.3.0; python_version < "3.4"

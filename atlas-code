@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""
+Atlas Code V2 - AI Pair Programming with Smart Model Routing
+
+Main executable that provides intelligent model routing and Agent OS
+integration on top of vanilla Aider.
+
+Usage:
+    atlas-code "your task description"
+    atlas-code --tier gold "implement user authentication"
+    atlas-code --models
+    atlas-code --budget-status
+    atlas-code --init-agent-os
+"""
+
+import sys
+import argparse
+import logging
+from pathlib import Path
+
+# Add the atlas_core module to Python path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from atlas_core import ModelRouter, AiderLauncher, BudgetManager
+from atlas_core.router import ModelTier
+
+
+def setup_logging(verbose: bool = False):
+    """Setup logging configuration."""
+    level = logging.INFO if verbose else logging.WARNING
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Atlas Code V2 - AI Pair Programming with Smart Model Routing",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  atlas-code "create a Python calculator"
+  atlas-code --tier platinum "design a user authentication system"
+  atlas-code --models
+  atlas-code --budget-status
+  atlas-code --init-agent-os
+  
+Model Tiers:
+  silver   - Budget models for simple tasks
+  gold     - Balanced models for regular work  
+  platinum - Premium models for complex coding
+  diamond  - Flagship models for architecture
+"""
+    )
+    
+    # Main task argument
+    parser.add_argument(
+        "task",
+        nargs="?",
+        help="Description of the task you want to accomplish"
+    )
+    
+    # Files to include
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="Files to include in the coding session"
+    )
+    
+    # Model tier selection
+    parser.add_argument(
+        "--tier",
+        choices=["silver", "gold", "platinum", "diamond"],
+        help="Force a specific model tier"
+    )
+    
+    # Information commands
+    parser.add_argument(
+        "--models",
+        action="store_true",
+        help="List available models and tiers"
+    )
+    
+    parser.add_argument(
+        "--budget-status",
+        action="store_true",
+        help="Show current budget status"
+    )
+    
+    parser.add_argument(
+        "--init-agent-os",
+        action="store_true",
+        help="Initialize Agent OS directory structure"
+    )
+    
+    # Budget management
+    parser.add_argument(
+        "--set-budget",
+        type=float,
+        metavar="AMOUNT",
+        help="Set daily budget limit in USD"
+    )
+    
+    parser.add_argument(
+        "--no-budget-check",
+        action="store_true",
+        help="Skip budget checking for this request"
+    )
+    
+    # Preferences
+    parser.add_argument(
+        "--free-only",
+        action="store_true",
+        help="Use only free models when available"
+    )
+    
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    
+    # Pass-through arguments to Aider
+    parser.add_argument(
+        "--aider-args",
+        nargs="*",
+        help="Additional arguments to pass to Aider"
+    )
+    
+    return parser.parse_args()
+
+
+def main():
+    """Main entry point for Atlas Code V2."""
+    args = parse_args()
+    setup_logging(args.verbose)
+    
+    try:
+        # Initialize launcher
+        launcher = AiderLauncher()
+        
+        # Handle information commands
+        if args.models:
+            if args.tier:
+                tier = ModelTier(args.tier)
+                launcher.list_models(tier)
+            else:
+                launcher.list_models()
+            return 0
+        
+        if args.budget_status:
+            launcher.show_budget_status()
+            return 0
+        
+        if args.init_agent_os:
+            launcher.initialize_agent_os()
+            return 0
+        
+        # Handle budget management
+        if args.set_budget is not None:
+            launcher.budget.set_daily_limit(args.set_budget)
+            print(f"✅ Daily budget set to ${args.set_budget}")
+            return 0
+        
+        # Check if we have a task to work on
+        if not args.task:
+            print("❌ No task provided!")
+            print("Usage: atlas-code 'your task description'")
+            print("Try: atlas-code --help")
+            return 1
+        
+        # Validate API key
+        import os
+        if not os.getenv('OPENAI_API_KEY'):
+            print("❌ API key not found!")
+            print("Set OPENAI_API_KEY environment variable with your OpenRouter key")
+            print("Get a key at: https://openrouter.ai")
+            return 1
+        
+        # Parse tier if specified
+        force_tier = None
+        if args.tier:
+            force_tier = ModelTier(args.tier)
+        
+        # Launch Aider with enhancements
+        return launcher.launch_aider(
+            user_prompt=args.task,
+            files=args.files if args.files else None,
+            force_tier=force_tier,
+            extra_args=args.aider_args,
+            budget_check=not args.no_budget_check
+        )
+        
+    except KeyboardInterrupt:
+        print("\n🛑 Interrupted by user")
+        return 130
+    except Exception as e:
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        else:
+            print(f"❌ Error: {e}")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
