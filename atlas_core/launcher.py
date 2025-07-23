@@ -7,6 +7,7 @@ import json
 import difflib
 
 from .openrouter_client import OpenRouterClient
+from .semantic_classifier import SemanticClassifier
 
 def parse_file_modifications(response_text):
     """Parses the LLM response to find file modification blocks."""
@@ -65,6 +66,9 @@ def main():
     # --- Initialize OpenRouter Client ---
     client = OpenRouterClient(api_key, model_tiers)
 
+    # --- Initialize Semantic Classifier ---
+    semantic_classifier = SemanticClassifier()
+
     # --- File Context (In-memory store) ---
     file_context = {}
 
@@ -72,6 +76,7 @@ def main():
     conversation_history = []
 
     print("Welcome to Atlas Code V5!")
+
     print("Type /add <file_path> to add a file to context, or /exit to quit.")
 
     # --- Basic Interactive CLI (Task 2.2.1 & 2.2.2) ---
@@ -116,7 +121,14 @@ def main():
             messages.append({"role": "user", "content": user_input})
 
             # --- Intent Classification and Model Selection (Task 1.2.1, 1.2.2, 1.2.3, 1.2.4) ---
-            intent = classify_intent(user_input)
+            # First, try semantic classification
+            semantic_intent, confidence = semantic_classifier.classify(user_input)
+            if confidence > 0.7: # Use semantic if confident enough
+                intent = semantic_intent
+            else:
+                # Fallback to keyword-based classification
+                intent = classify_intent(user_input)
+
             tier = intent_routes.get(intent, "default")
             
             selected_model = None
