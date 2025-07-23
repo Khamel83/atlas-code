@@ -144,7 +144,7 @@ unset OPENAI_API_KEY
 
 ## 🎯 Success Criteria
 
-Atlas Code V2 is production-ready when:
+Ralex V2 is production-ready for:
 1. **Core Function**: Can successfully route tasks to appropriate models and generate code
 2. **Budget Control**: Accurately tracks costs and enforces limits
 3. **Reliability**: Handles errors gracefully without data loss
