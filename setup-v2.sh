@@ -52,22 +52,22 @@ fi
 
 # Test installation
 echo "🧪 Testing installation..."
-if ./atlas-code --models > /dev/null 2>&1; then
-    echo "✅ Atlas Code V2 installed successfully!"
+if ./ralex --models > /dev/null 2>&1; then
+    echo "✅ Ralex V2 installed successfully!"
     echo ""
     echo "Next steps:"
     echo "1. Add your OpenRouter API key to .env file:"
     echo "   nano .env"
     echo ""
-    echo "2. Try Atlas Code:"
-    echo "   ./atlas-code 'create a hello world script'"
+    echo "2. Try Ralex:"
+    echo "   ./ralex 'create a hello world script'"
     echo ""
     echo "3. Initialize Agent OS (optional):"
-    echo "   ./atlas-code --init-agent-os"
+    echo "   ./ralex --init-agent-os"
     echo "   # Agent OS: https://github.com/Khamel83/agent-os"
     echo ""
     echo "4. Check available models:"
-    echo "   ./atlas-code --models"
+    echo "   ./ralex --models"
 else
     echo "❌ Installation test failed"
     echo "Check that all dependencies installed correctly"
