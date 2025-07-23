@@ -751,9 +751,9 @@ def get_parser(default_config_files, git_root):
         default=False,
     )
     group.add_argument(
-        "--one-shot",
+        "--yolo",
         action="store_true",
-        help="Run a single command and exit",
+        help="Enable YOLO mode (default: False)",
         default=False,
     )
     group.add_argument(

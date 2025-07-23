@@ -37,7 +37,7 @@ from aider.report import report_uncaught_exceptions
 from aider.versioncheck import check_version, install_from_main_branch, install_upgrade
 from aider.watch import FileWatcher
 
-from .dump import dump  # noqa: F401
+from aider.dump import dump  # noqa: F401
 
 
 def check_config_files_for_yes(config_files):
@@ -908,7 +908,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
                 io,
                 fnames,
                 git_dname,
-                args.atlas_codeignore,
+                args.aiderignore,
                 models=main_model.commit_message_models(),
                 attribute_author=args.attribute_author,
                 attribute_committer=args.attribute_committer,
@@ -1028,8 +1028,8 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     ignores = []
     if git_root:
         ignores.append(str(Path(git_root) / ".gitignore"))
-    if args.atlas_codeignore:
-        ignores.append(args.atlas_codeignore)
+    if args.aiderignore:
+        ignores.append(args.aiderignore)
 
     if args.watch_files:
         file_watcher = FileWatcher(

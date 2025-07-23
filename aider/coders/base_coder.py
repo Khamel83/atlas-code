@@ -538,9 +538,9 @@ class Coder:
                 map_mul_no_files=map_mul_no_files,
                 refresh=map_refresh,
                 handover_callback=self._repo_handover_callback if hasattr(self, 'handover_enabled') and self.handover_enabled else None,
-                budget_manager=self.budget_manager,
-                cost_estimator=self.cost_estimator,
-                tier_router=self.tier_router,
+                budget_manager=budget_manager,
+                cost_estimator=cost_estimator,
+                tier_router=tier_router,
             )
 
         self.summarizer = summarizer or ChatSummary(
@@ -599,12 +599,13 @@ class Coder:
         self.chat_completion_response_hashes = chat_completion_response_hashes
         self.need_commit_before_edits = need_commit_before_edits
         
-        # Initialize budget management components
         self.budget_manager = budget_manager
         self.cost_estimator = cost_estimator  
         self.tier_router = tier_router
 
-    def _capture_handover_state(self, trigger_reason: str, trigger_type: str = "automated"):
+        # Initialize budget management components
+
+    def capture_handover_state(self, trigger_reason: str, trigger_type: str = "automated", *args, **kwargs):
         """Capture and save the current session state for handover."""
         if not self.handover_enabled:
             return
@@ -1874,7 +1875,7 @@ class Coder:
         """Cleanup when the Coder object is destroyed."""
         self.ok_to_warm_cache = False
         if self.handover_enabled and self.handover_on_exit:
-            self._capture_handover_state("on_exit", "automated")
+            self.capture_handover_state("on_exit", "automated")
 
     def add_assistant_reply_to_cur_messages(self):
         if self.partial_response_content:
