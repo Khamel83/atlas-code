@@ -199,15 +199,15 @@ def main():
                             if exec_result["success"]:
                                 print("Execution successful.")
                                 if exec_result["stdout"]:
-                                    print("Stdout:", exec_result["stdout"])
+                                    print("Stdout:\n" + exec_result["stdout"])
                                 if exec_result["stderr"]:
-                                    print("Stderr:", exec_result["stderr"])
+                                    print("Stderr:\n" + exec_result["stderr"])
                             else:
                                 print("Execution failed.")
                                 if exec_result["stdout"]:
-                                    print("Stdout:", exec_result["stdout"])
+                                    print("Stdout:\n" + exec_result["stdout"])
                                 if exec_result["stderr"]:
-                                    print("Stderr:", exec_result["stderr"])
+                                    print("Stderr:\n" + exec_result["stderr"])
                         else:
                             print(f"Execution of {block["language"]} code is not yet supported.")
 
