@@ -178,7 +178,7 @@ Atlas Code V2's simple architecture makes contributions easy:
 
 1. Fork the repository
 2. Create a feature branch
-3. Make changes to `atlas_core/` modules
+3. Make changes to ralex_core/ modules
 4. Test with `./atlas-code --models`
 5. Submit a pull request
 
