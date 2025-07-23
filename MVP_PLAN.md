@@ -1,4 +1,4 @@
-# Atlas Code V5 - MVP Development Plan
+# Ralex - MVP Development Plan
 
 This document outlines the detailed, task-by-task plan to develop the Minimum Viable Product (MVP) for Atlas Code V5. The goal is to create a functional, well-documented, and stable foundation that clearly demonstrates the project's core value proposition.
 
