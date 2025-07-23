@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import json
+import difflib
 
 from .openrouter_client import OpenRouterClient
 
@@ -135,14 +136,32 @@ def main():
                 full_response += chunk
             print("\n")
 
-            # --- File Writing (Task 2.5.1, 2.5.2, 2.5.3, 2.5.4) ---
+            # --- File Writing with Diff Preview (Task 2.2.1, 2.2.2, 2.5.1, 2.5.2, 2.5.3, 2.5.4) ---
             modifications = parse_file_modifications(full_response)
             if modifications:
                 print("The assistant proposed the following changes:")
-                for file_path, content in modifications.items():
-                    print(f"\n--- Changes for {file_path} ---")
-                    # For simplicity, we print the whole new content. A diff would be better.
-                    print(content)
+                for file_path, new_content in modifications.items():
+                    original_content = ""
+                    if os.path.exists(file_path):
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            original_content = f.read()
+
+                    diff = difflib.unified_diff(
+                        original_content.splitlines(keepends=True),
+                        new_content.splitlines(keepends=True),
+                        fromfile=file_path + " (original)",
+                        tofile=file_path + " (proposed)"
+                    )
+                    print(f"\n--- Diff for {file_path} ---")
+                    for line in diff:
+                        if line.startswith('+'):
+                            print(f"\033[92m{line}\033[0m", end="") # Green
+                        elif line.startswith('-'):
+                            print(f"\033[91m{line}\033[0m", end="") # Red
+                        elif line.startswith('@'):
+                            print(f"\033[94m{line}\033[0m", end="") # Blue
+                        else:
+                            print(line, end="")
                     print("---------------------------")
                 
                 confirm = input("Apply these changes? [y/N] ").lower()
