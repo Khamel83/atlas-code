@@ -26,6 +26,26 @@ def load_config(file_path):
         print(f"Error: Invalid JSON in configuration file at {file_path}", file=sys.stderr)
         sys.exit(1)
 
+def classify_intent(user_input):
+    """Classifies user input into a predefined intent based on keywords."""
+    user_input_lower = user_input.lower()
+    if "debug" in user_input_lower or "fix" in user_input_lower or "error" in user_input_lower:
+        return "debug"
+    elif "generate" in user_input_lower or "create" in user_input_lower or "build" in user_input_lower:
+        return "generate"
+    elif "edit" in user_input_lower or "modify" in user_input_lower or "change" in user_input_lower:
+        return "edit"
+    elif "review" in user_input_lower or "analyze" in user_input_lower or "suggest" in user_input_lower:
+        return "review"
+    elif "optimize" in user_input_lower or "performance" in user_input_lower or "faster" in user_input_lower:
+        return "optimize"
+    elif "format" in user_input_lower or "style" in user_input_lower or "lint" in user_input_lower:
+        return "format"
+    elif "explain" in user_input_lower or "document" in user_input_lower or "how to" in user_input_lower:
+        return "explain"
+    else:
+        return "default"
+
 def main():
     """The main entry point for the Atlas Code V5 agent."""
     # --- API Key Check (Task 2.1.1 & 2.1.2) ---
@@ -89,12 +109,21 @@ def main():
             messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": user_input})
 
-            # Hardcoded model for the MVP (will be replaced by routing)
-            model = settings["default_model"]
+            # --- Intent Classification and Model Selection (Task 1.2.1, 1.2.2, 1.2.3, 1.2.4) ---
+            intent = classify_intent(user_input)
+            tier = intent_routes.get(intent, "default")
+            
+            selected_model = None
+            if tier in model_tiers["tiers"] and model_tiers["tiers"][tier]:
+                selected_model = model_tiers["tiers"][tier][0]["name"]
+            
+            if not selected_model:
+                print(f"Error: No model found for tier '{tier}'. Please check your model_tiers.json and intent_routes.json.", file=sys.stderr)
+                continue
 
-            print(f"\nAssistant (using {model}):", end="", flush=True)
+            print(f"\nAssistant (using {selected_model}, intent: {intent}, tier: {tier}):", end="", flush=True)
             full_response = ""
-            for chunk in client.send_request(model, messages):
+            for chunk in client.send_request(selected_model, messages):
                 print(chunk, end="", flush=True)
                 full_response += chunk
             print("\n")
