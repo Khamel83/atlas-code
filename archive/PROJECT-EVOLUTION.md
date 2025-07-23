@@ -196,4 +196,4 @@ This represents a classic software evolution: from complex to simple, from monol
 **Maintainability**: Clean architecture makes future improvements easy
 **User Experience**: Zero-config intelligent routing "just works"
 
-Atlas Code V2 transforms AI-assisted coding from a manual, anxiety-inducing process into an automated, cost-effective, and reliable development workflow.
+Ralex V2 transforms AI-assisted coding from a manual, anxiety-inducing process into an automated, cost-effective, and reliable development workflow.
