@@ -329,7 +329,7 @@ def test_end_to_end_workflow():
 
 def run_all_tests() -> bool:
     """Run all tests and return overall success."""
-    print("🧪 Atlas Code V2 Intelligent Routing Test Suite")
+    print("🧪 Ralex V2 Intelligent Routing Test Suite")
     print("=" * 50)
     
     # Set test API key
