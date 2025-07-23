@@ -92,7 +92,7 @@ def analyze_exercise_solutions(dirs=None, topn=None, copy_hard_set=False):
                     (
                         entry["pass_rate_2"]
                         for entry in yaml.safe_load(
-                            open("aider/website/_data/polyglot_leaderboard.yml")
+                            open("ralex/website/_data/polyglot_leaderboard.yml")
                         )
                         if entry["dirname"] == dirname
                     ),
