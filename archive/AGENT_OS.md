@@ -52,7 +52,7 @@ Edit files in `agent_os/` to customize for your project:
 
 ## Agent OS vs Atlas Code V2
 - **Agent OS**: Development standards and workflow framework
-- **Atlas Code**: AI pair programming with intelligent model routing
+- **Ralex**: AI pair programming with intelligent model routing
 - **Together**: AI coding that follows your project's standards and workflows
 
 For more details on Agent OS capabilities, see: https://github.com/Khamel83/agent-os
