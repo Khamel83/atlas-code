@@ -135,7 +135,7 @@ These are **features, not bugs** - V2 is intentionally simplified compared to V1
 
 ### Post-Installation
 - ✅ Initialize Agent OS: `./atlas-code --init-agent-os`
-- ✅ Set budget limit: `./atlas-code --set-budget 5.00`
+- ✅ Set budget limit: `./ralex --set-budget 1.00`
 - ✅ Start auto-push: `./auto-push.sh &` (optional)
 - ✅ Begin development: `./atlas-code "your first task"`
 
