@@ -113,7 +113,7 @@ Add to `model_score.json` or separate config:
 ```
 
 #### 5. **Universal Launcher**
-Refactor `atlas_core/launcher.py` to be backend-agnostic:
+Refactor ralex_core/launcher.py to be backend-agnostic:
 
 ```python
 class UniversalLauncher:
