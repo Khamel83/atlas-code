@@ -68,6 +68,9 @@ def main():
     # --- File Context (In-memory store) ---
     file_context = {}
 
+    # --- Conversation History (Task 3.2.1) ---
+    conversation_history = []
+
     print("Welcome to Atlas Code V5!")
     print("Type /add <file_path> to add a file to context, or /exit to quit.")
 
@@ -97,7 +100,7 @@ def main():
                 print("Please add at least one file to the context with /add <file_path>", file=sys.stderr)
                 continue
 
-            # Prepare the messages for the LLM
+            # Prepare the messages for the LLM (Task 3.2.2)
             messages = []
             context_str = "\n".join([f"--- {path} ---\n{content}" for path, content in file_context.items()])
             system_prompt = (
@@ -109,6 +112,7 @@ def main():
                 "You can provide multiple blocks for multiple files."
             )
             messages.append({"role": "system", "content": system_prompt})
+            messages.extend(conversation_history) # Add previous conversation
             messages.append({"role": "user", "content": user_input})
 
             # --- Intent Classification and Model Selection (Task 1.2.1, 1.2.2, 1.2.3, 1.2.4) ---
@@ -136,6 +140,10 @@ def main():
                 print(chunk, end="", flush=True)
                 full_response += chunk
             print("\n")
+
+            # Update conversation history (Task 3.2.1)
+            conversation_history.append({"role": "user", "content": user_input})
+            conversation_history.append({"role": "assistant", "content": full_response})
 
             # --- File Writing with Diff Preview (Task 2.2.1, 2.2.2, 2.5.1, 2.5.2, 2.5.3, 2.5.4) ---
             modifications = parse_file_modifications(full_response)
