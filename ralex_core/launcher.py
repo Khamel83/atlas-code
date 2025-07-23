@@ -7,10 +7,10 @@ import json
 import difflib
 import argparse
 
-from .openrouter_client import OpenRouterClient
-from .semantic_classifier import SemanticClassifier
-from .budget_optimizer import BudgetOptimizer
-from .code_executor import CodeExecutor
+from ralex_core.openrouter_client import OpenRouterClient
+from ralex_core.semantic_classifier import SemanticClassifier
+from ralex_core.budget_optimizer import BudgetOptimizer
+from ralex_core.code_executor import CodeExecutor
 
 def parse_file_modifications(response_text):
     """Parses the LLM response to find file modification blocks."""
