@@ -17,3 +17,16 @@ aider/_version.py
 .gitattributes
 tmp.benchmarks/
 .docker_bash_history
+
+# Atlas Code V2 specific
+atlas-env/
+atlas-env-v2/
+.env
+.atlas-code/
+*.jsonl
+budget_config.json
+
+# Additional Python
+__pycache__/
+*.py[cod]
+*$py.class
