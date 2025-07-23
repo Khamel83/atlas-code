@@ -5,6 +5,7 @@ import sys
 import re
 import json
 import difflib
+import argparse
 
 from .openrouter_client import OpenRouterClient
 from .semantic_classifier import SemanticClassifier
@@ -59,43 +60,15 @@ def classify_intent(user_input):
     else:
         return "default"
 
-def main():
-    """The main entry point for the Atlas Code V5 agent."""
-    # --- API Key Check (Task 2.1.1 & 2.1.2) ---
-    api_key = os.getenv("OPENROUTER_API_KEY")
-
-
-    if not api_key:
-        print("Error: The OPENROUTER_API_KEY environment variable is not set.", file=sys.stderr)
-        print("Please get a key from https://openrouter.ai/ and set the environment variable.", file=sys.stderr)
-        sys.exit(1)
-
-    # --- Load Configuration Files (Task 1.1.5) ---
-    config_dir = os.path.join(os.path.dirname(__file__), "..", "config")
-    settings = load_config(os.path.join(config_dir, "settings.json"))
-    model_tiers = load_config(os.path.join(config_dir, "model_tiers.json"))
-    intent_routes = load_config(os.path.join(config_dir, "intent_routes.json"))
-
-    # --- Initialize OpenRouter Client ---
-    client = OpenRouterClient(api_key, model_tiers)
-
-    # --- Initialize Semantic Classifier ---
-    semantic_classifier = SemanticClassifier()
-
-    # --- Initialize Budget Optimizer ---
-    budget_optimizer = BudgetOptimizer(daily_limit=settings.get("daily_limit"))
-
-    # --- File Context (In-memory store) ---
+def run_interactive_mode(settings, model_tiers, intent_routes, client, semantic_classifier, budget_optimizer):
+    """Runs the interactive CLI mode."""
     file_context = {}
-
-    # --- Conversation History (Task 3.2.1) ---
     conversation_history = []
+    code_executor = CodeExecutor()
 
     print("Welcome to Atlas Code V5!")
-
     print("Type /add <file_path> to add a file to context, or /exit to quit.")
 
-    # --- Basic Interactive CLI (Task 2.2.1 & 2.2.2) ---
     while True:
         try:
             user_input = input("> ")
@@ -121,7 +94,7 @@ def main():
                 print("Please add at least one file to the context with /add <file_path>", file=sys.stderr)
                 continue
 
-            # Prepare the messages for the LLM (Task 3.2.2)
+            # Prepare the messages for the LLM
             messages = []
             context_str = "\n".join([f"--- {path} ---\n{content}" for path, content in file_context.items()])
             system_prompt = (
