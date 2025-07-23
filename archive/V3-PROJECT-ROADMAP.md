@@ -1186,7 +1186,7 @@ def main():
                 project_root=Path.cwd()
             )
         except Exception as e:
-            print(f"❌ Failed to initialize Atlas Code: {str(e)}")
+            print("❌ Failed to initialize Ralex: {str(e)}")
             print("💡 Try: atlas-code-v3 --list-executors to see available options")
             return 1
         
