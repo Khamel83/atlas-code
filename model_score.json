@@ -1,0 +1,16 @@
+{
+  "silver": [
+    "google/gemini-2.0-flash-001"
+  ],
+  "gold": [
+    "deepseek/deepseek-chat",
+    "moonshotai/kimi-k2"
+  ],
+  "platinum": [
+    "openai/gpt-4.1",
+    "google/gemini-2.5-flash"
+  ],
+  "diamond": [
+    "anthropic/claude-3-sonnet-20240229"
+  ]
+}

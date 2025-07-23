@@ -17,6 +17,14 @@ from typing import List, Optional, Dict, Any
 from .router import ModelRouter, ModelTier
 from .budget import BudgetManager
 
+# Import the new intelligent router
+try:
+    from model_router import IntelligentModelRouter, is_low_confidence
+    INTELLIGENT_ROUTING_AVAILABLE = True
+except ImportError:
+    INTELLIGENT_ROUTING_AVAILABLE = False
+    logging.warning("Intelligent routing not available, falling back to pattern-based routing")
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +48,12 @@ class AiderLauncher:
             project_root: Root directory of the project (defaults to current directory)
         """
         self.project_root = project_root or Path.cwd()
-        self.router = ModelRouter()
+        # Initialize both routing systems
+        self.router = ModelRouter()  # Legacy pattern-based router
+        if INTELLIGENT_ROUTING_AVAILABLE:
+            self.intelligent_router = IntelligentModelRouter()
+        else:
+            self.intelligent_router = None
         self.budget = BudgetManager()
         self.agent_os_dir = self.project_root / "agent_os"
         
@@ -233,18 +246,46 @@ class AiderLauncher:
         # Enhance the prompt with Agent OS standards
         enhanced_prompt = self.enhance_prompt(user_prompt, context)
         
-        # Route to optimal model
-        project_context = {
-            'file_count': len(files) if files else 0,
-            'is_new_project': not (self.project_root / ".git").exists(),
-            **context.get('project_info', {})
-        }
-        
-        model_name, selected_tier, cost_per_1k = self.router.route_request(
-            enhanced_prompt, 
-            project_context, 
-            force_tier
-        )
+        # Route to optimal model using intelligent or legacy routing
+        if self.intelligent_router and not force_tier:
+            # Use intelligent AI-powered routing
+            budget_remaining = self.budget.check_budget_status().get('remaining', float('inf'))
+            if budget_remaining is None:
+                budget_remaining = float('inf')
+            
+            routing_info = self.intelligent_router.route_request(
+                enhanced_prompt, 
+                budget_remaining,
+                allow_compression=True
+            )
+            
+            model_name = routing_info['model']
+            selected_tier = routing_info['tier']
+            cost_per_1k = self.intelligent_router.model_costs.get(model_name, 1.0)
+            routing_reason = routing_info['reason']
+            
+            # Log intelligent routing decision
+            print(f"🧠 AI Classification: {selected_tier} tier")
+            print(f"🎯 Selected Model: {model_name}")
+            print(f"💡 Reason: {routing_reason}")
+            if routing_info['prompt_compressed']:
+                print(f"📝 Prompt compressed: {routing_info['original_prompt_length']} → {routing_info['final_prompt_length']} chars")
+            
+        else:
+            # Use legacy pattern-based routing (fallback or forced tier)
+            project_context = {
+                'file_count': len(files) if files else 0,
+                'is_new_project': not (self.project_root / ".git").exists(),
+                **context.get('project_info', {})
+            }
+            
+            model_name, selected_tier_obj, cost_per_1k = self.router.route_request(
+                enhanced_prompt, 
+                project_context, 
+                force_tier
+            )
+            selected_tier = selected_tier_obj.value
+            routing_reason = "pattern-based routing" + (f" (forced {force_tier.value} tier)" if force_tier else "")
         
         # Estimate cost and check budget
         estimated_tokens = len(enhanced_prompt.split()) * 1.3  # Rough estimation
@@ -279,7 +320,10 @@ class AiderLauncher:
         
         # Display what we're doing
         print(f"🎯 Task: {user_prompt}")
-        print(f"🤖 Model: {model_name} ({selected_tier.value} tier)")
+        if not (self.intelligent_router and not force_tier):
+            # Only show basic info for legacy routing (intelligent routing already showed details)
+            print(f"🤖 Model: {model_name} ({selected_tier} tier)")
+            print(f"💡 Reason: {routing_reason}")
         print(f"💰 Estimated cost: ${estimated_cost:.3f}")
         if context['standards']:
             print(f"📋 Using {len(context['standards'])} coding standards")
@@ -296,7 +340,7 @@ class AiderLauncher:
                     tokens_sent=int(estimated_tokens * 0.7),
                     tokens_received=int(estimated_tokens * 0.3), 
                     cost=estimated_cost,
-                    task_type=selected_tier.value
+                    task_type=selected_tier
                 )
             
             return result.returncode
