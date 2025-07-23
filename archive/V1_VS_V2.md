@@ -78,7 +78,7 @@ Atlas Code V2 is intentionally designed as a lightweight wrapper that:
 - Regulatory compliance requiring detailed audit trails
 
 ## Migration Path (V1 → V2)
-If you have V1 Atlas Code:
+If you have V1 Ralex Code:
 
 1. **Export key configurations**: Model preferences, budget settings
 2. **Install V2**: Use the clean wrapper architecture  
