@@ -3,6 +3,7 @@
 import os
 import sys
 import re
+import json
 
 from .openrouter_client import OpenRouterClient
 
@@ -13,6 +14,18 @@ def parse_file_modifications(response_text):
     modifications = {file_path: content for file_path, content in matches}
     return modifications
 
+def load_config(file_path):
+    """Loads a JSON configuration file."""
+    try:
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: Configuration file not found at {file_path}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON in configuration file at {file_path}", file=sys.stderr)
+        sys.exit(1)
+
 def main():
     """The main entry point for the Atlas Code V5 agent."""
     # --- API Key Check (Task 2.1.1 & 2.1.2) ---
@@ -22,8 +35,14 @@ def main():
         print("Please get a key from https://openrouter.ai/ and set the environment variable.", file=sys.stderr)
         sys.exit(1)
 
+    # --- Load Configuration Files (Task 1.1.5) ---
+    config_dir = os.path.join(os.path.dirname(__file__), "..", "config")
+    settings = load_config(os.path.join(config_dir, "settings.json"))
+    model_tiers = load_config(os.path.join(config_dir, "model_tiers.json"))
+    intent_routes = load_config(os.path.join(config_dir, "intent_routes.json"))
+
     # --- Initialize OpenRouter Client ---
-    client = OpenRouterClient(api_key)
+    client = OpenRouterClient(api_key, model_tiers)
 
     # --- File Context (In-memory store) ---
     file_context = {}
@@ -70,8 +89,8 @@ def main():
             messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": user_input})
 
-            # Hardcoded model for the MVP
-            model = "mistralai/mistral-7b-instruct-v0.2"
+            # Hardcoded model for the MVP (will be replaced by routing)
+            model = settings["default_model"]
 
             print(f"\nAssistant (using {model}):", end="", flush=True)
             full_response = ""

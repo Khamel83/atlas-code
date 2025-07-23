@@ -8,9 +8,10 @@ import requests
 class OpenRouterClient:
     """A simplified client for making requests to the OpenRouter API."""
 
-    def __init__(self, api_key):
+    def __init__(self, api_key, model_tiers=None):
         self.api_key = api_key
         self.base_url = "https://openrouter.ai/api/v1"
+        self.model_tiers = model_tiers if model_tiers is not None else {}
 
     def send_request(self, model, messages):
         """Sends a request to the specified model and streams the response."""
@@ -45,4 +46,3 @@ class OpenRouterClient:
         except requests.exceptions.RequestException as e:
             print(f"\nError making request to OpenRouter: {e}", file=sys.stderr)
             return
-
