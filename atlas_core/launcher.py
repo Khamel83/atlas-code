@@ -9,6 +9,7 @@ import difflib
 from .openrouter_client import OpenRouterClient
 from .semantic_classifier import SemanticClassifier
 from .budget_optimizer import BudgetOptimizer
+from .code_executor import CodeExecutor
 
 def parse_file_modifications(response_text):
     """Parses the LLM response to find file modification blocks."""
@@ -16,6 +17,15 @@ def parse_file_modifications(response_text):
     matches = re.findall(pattern, response_text)
     modifications = {file_path: content for file_path, content in matches}
     return modifications
+
+def parse_code_blocks(response_text):
+    """Parses the LLM response to find executable code blocks."""
+    pattern = r"```(python|bash|sh)\n([\s\S]*?)\n```"
+    matches = re.findall(pattern, response_text)
+    code_blocks = []
+    for lang, code in matches:
+        code_blocks.append({"language": lang, "code": code})
+    return code_blocks
 
 def load_config(file_path):
     """Loads a JSON configuration file."""
@@ -53,6 +63,7 @@ def main():
     """The main entry point for the Atlas Code V5 agent."""
     # --- API Key Check (Task 2.1.1 & 2.1.2) ---
     api_key = os.getenv("OPENROUTER_API_KEY")
+
 
     if not api_key:
         print("Error: The OPENROUTER_API_KEY environment variable is not set.", file=sys.stderr)
@@ -169,6 +180,36 @@ def main():
                 print(chunk, end="", flush=True)
                 full_response += chunk
             print("\n")
+
+            # --- Code Execution (Task 6.1.3 & 6.1.4) ---
+            code_blocks = parse_code_blocks(full_response)
+            if code_blocks:
+                print("The assistant proposed the following code to execute:")
+                for i, block in enumerate(code_blocks):
+                    print(f"\n--- Code Block {i+1} ({block["language"]}) ---")
+                    print(block["code"])
+                    print("---------------------------")
+                
+                confirm_exec = input("Execute this code? [y/N] ").lower()
+                if confirm_exec in ["y", "yes"]:
+                    for block in code_blocks:
+                        if block["language"] == "python":
+                            print(f"\nExecuting Python code...")
+                            exec_result = code_executor.execute_python_code(block["code"])
+                            if exec_result["success"]:
+                                print("Execution successful.")
+                                if exec_result["stdout"]:
+                                    print("Stdout:", exec_result["stdout"])
+                                if exec_result["stderr"]:
+                                    print("Stderr:", exec_result["stderr"])
+                            else:
+                                print("Execution failed.")
+                                if exec_result["stdout"]:
+                                    print("Stdout:", exec_result["stdout"])
+                                if exec_result["stderr"]:
+                                    print("Stderr:", exec_result["stderr"])
+                        else:
+                            print(f"Execution of {block["language"]} code is not yet supported.")
 
             # Update conversation history (Task 3.2.1)
             conversation_history.append({"role": "user", "content": user_input})
