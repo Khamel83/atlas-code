@@ -142,5 +142,5 @@ You can see examples of the benchmark report yaml in the
 
 - Contributions of benchmark results are welcome! Submit results by opening a PR with edits to the
 [aider leaderboard data files](https://github.com/Aider-AI/aider/blob/main/aider/website/_data/).
-- These scripts are not intended for use by typical aider end users.
+- These scripts are not intended for use by typical ralex end users.
 - Some of these tools are written as `bash` scripts, so it will be hard to use them on Windows.
