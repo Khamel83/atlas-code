@@ -121,6 +121,13 @@ def main():
                 print(f"Error: No model found for tier '{tier}'. Please check your model_tiers.json and intent_routes.json.", file=sys.stderr)
                 continue
 
+            # --- Pre-execution Dry Run and Confirmation (Task 2.1.1 & 2.1.2) ---
+            print(f"\nProposed Action: Intent '{intent}' using model '{selected_model}' (tier: {tier})")
+            confirm = input("Proceed with this action? [Y/n] ").lower()
+            if confirm == 'n':
+                print("Action cancelled.")
+                continue
+
             print(f"\nAssistant (using {selected_model}, intent: {intent}, tier: {tier}):", end="", flush=True)
             full_response = ""
             for chunk in client.send_request(selected_model, messages):
