@@ -66,7 +66,7 @@ def run_interactive_mode(settings, model_tiers, intent_routes, client, semantic_
     conversation_history = []
     code_executor = CodeExecutor()
 
-    print("Welcome to Atlas Code V5!")
+    print("Welcome to Ralex!")
     print("Type /add <file_path> to add a file to context, or /exit to quit.")
 
     while True:
