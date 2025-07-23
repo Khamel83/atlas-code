@@ -1713,7 +1713,7 @@ class AtlasV5CLI:
     atlas-code-v5 --system-status
     atlas-code-v5 --optimize-models
     atlas-code-v5 --clear-memory
-    atlas-code-v5 --export-data backup.json
+    ralex-v5 --export-data backup.json
 
 🎯 INTENTS:
   generate  - Create new code from scratch
