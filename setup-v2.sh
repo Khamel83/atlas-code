@@ -64,6 +64,7 @@ if ./atlas-code --models > /dev/null 2>&1; then
     echo ""
     echo "3. Initialize Agent OS (optional):"
     echo "   ./atlas-code --init-agent-os"
+    echo "   # Agent OS: https://github.com/Khamel83/agent-os"
     echo ""
     echo "4. Check available models:"
     echo "   ./atlas-code --models"

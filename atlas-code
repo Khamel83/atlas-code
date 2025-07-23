@@ -5,6 +5,8 @@ Atlas Code V2 - AI Pair Programming with Smart Model Routing
 Main executable that provides intelligent model routing and Agent OS
 integration on top of vanilla Aider.
 
+Agent OS: https://github.com/Khamel83/agent-os
+
 Usage:
     atlas-code "your task description"
     atlas-code --tier gold "implement user authentication"
