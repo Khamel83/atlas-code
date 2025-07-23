@@ -18,7 +18,76 @@ Atlas Code V5 is a standalone coding assistant that runs entirely in your termin
 
 ## Getting Started
 
-*(This section will be updated with detailed instructions as the MVP is developed.)*
+Here is how you can get the Atlas Code V5 MVP up and running in a few simple steps.
+
+### 1. Clone the Repository
+
+First, clone the project to your local machine:
+
+```bash
+git clone https://github.com/Khamel83/atlas-code.git
+cd atlas-code
+```
+
+### 2. Set Your API Key
+
+Atlas uses the OpenRouter service to connect to various language models. You will need an OpenRouter API key.
+
+1.  Go to [https://openrouter.ai/](https://openrouter.ai/) to get your free API key.
+2.  Set it as an environment variable in your terminal:
+
+```bash
+export OPENROUTER_API_KEY="YOUR_KEY_HERE"
+```
+
+### 3. Install Dependencies
+
+The project has a few Python dependencies. Install them using pip:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the Agent
+
+Now you are ready to launch the agent:
+
+```bash
+python -m atlas_core.launcher
+```
+
+### 5. Example Workflow
+
+Here is a quick example of how to use the agent to refactor a simple Python file.
+
+1.  **Create a file** named `my_script.py` with the following content:
+
+    ```python
+    def hello():
+        print("hello world")
+    ```
+
+2.  **Start the agent** (if you haven't already):
+
+    ```bash
+    python -m atlas_core.launcher
+    ```
+
+3.  **Add the file** to the agent's context:
+
+    ```
+    > /add my_script.py
+    ```
+
+4.  **Make a request** to the agent:
+
+    ```
+    > Add a docstring to the function in my_script.py
+    ```
+
+5.  The agent will stream a response and propose a change. **Confirm the change** by typing `y`.
+
+That's it! The agent will have modified your file.
 
 ## Project Roadmap
 
