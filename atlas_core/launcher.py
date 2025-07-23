@@ -8,6 +8,7 @@ import difflib
 
 from .openrouter_client import OpenRouterClient
 from .semantic_classifier import SemanticClassifier
+from .budget_optimizer import BudgetOptimizer
 
 def parse_file_modifications(response_text):
     """Parses the LLM response to find file modification blocks."""
@@ -52,6 +53,7 @@ def main():
     """The main entry point for the Atlas Code V5 agent."""
     # --- API Key Check (Task 2.1.1 & 2.1.2) ---
     api_key = os.getenv("OPENROUTER_API_KEY")
+
     if not api_key:
         print("Error: The OPENROUTER_API_KEY environment variable is not set.", file=sys.stderr)
         print("Please get a key from https://openrouter.ai/ and set the environment variable.", file=sys.stderr)
@@ -68,6 +70,9 @@ def main():
 
     # --- Initialize Semantic Classifier ---
     semantic_classifier = SemanticClassifier()
+
+    # --- Initialize Budget Optimizer ---
+    budget_optimizer = BudgetOptimizer()
 
     # --- File Context (In-memory store) ---
     file_context = {}
@@ -156,6 +161,18 @@ def main():
             # Update conversation history (Task 3.2.1)
             conversation_history.append({"role": "user", "content": user_input})
             conversation_history.append({"role": "assistant", "content": full_response})
+
+            # Record usage (Task 5.1.4)
+            # For simplicity, estimating tokens based on response length. Real implementation would use tokenizers.
+            estimated_tokens_sent = len(str(messages).split()) # Very rough estimate
+            estimated_tokens_received = len(full_response.split()) # Very rough estimate
+            cost_per_token = 0.0 # Placeholder, will get from model_tiers later
+            for t in model_tiers["tiers"][tier]:
+                if t["name"] == selected_model:
+                    cost_per_token = t["cost_per_token"]
+                    break
+            estimated_cost = (estimated_tokens_sent + estimated_tokens_received) * cost_per_token
+            budget_optimizer.record_usage(selected_model, estimated_tokens_sent, estimated_tokens_received, estimated_cost)
 
             # --- File Writing with Diff Preview (Task 2.2.1, 2.2.2, 2.5.1, 2.5.2, 2.5.3, 2.5.4) ---
             modifications = parse_file_modifications(full_response)
