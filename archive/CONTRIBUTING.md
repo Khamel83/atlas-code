@@ -199,7 +199,7 @@ The `.github/workflows/docker-build-test.yml` workflow is used to build a Docker
 
 #### Writing Tests
 
-When contributing new features or making changes to existing code, ensure that you write appropriate tests to maintain code coverage. Follow the existing patterns and naming conventions used in the `aider/tests` directory.
+When contributing new features or making changes to existing code, ensure that you write appropriate tests to maintain code coverage. Follow the existing patterns and naming conventions used in the ralex/tests directory.
 
 If you need to mock or create test data, consider adding it to the test files or creating separate fixtures or utility functions within the `aider/tests` directory.
 
