@@ -66,7 +66,7 @@ def plot_swe_bench(data_file, is_lite):
         bars.append(bar[0])
 
     for label in ax.get_xticklabels():
-        if "Aider" in str(label):
+        if "Ralex" in str(label):
             label.set_fontfamily("Helvetica Bold")
 
     for model, bar in zip(models, bars):
