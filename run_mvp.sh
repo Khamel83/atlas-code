@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script automates the setup and execution of the Atlas Code V5 MVP.
+# This script automates the setup and execution of the Ralex MVP.
 
 # Check for OPENROUTER_API_KEY
 if [ -z "$OPENROUTER_API_KEY" ]; then
@@ -18,5 +18,5 @@ else
 fi
 
 # Launch the agent
-echo "Launching Atlas Code V5..."
-python -m atlas_core.launcher
+echo "Launching Ralex..."
+python -m ralex_core.launcher
